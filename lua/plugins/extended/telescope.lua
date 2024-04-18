@@ -504,13 +504,13 @@ return {
             override_file_sorter = true,
             case_mode = "smart_case",
           },
-
           smart_open = {
             show_scores = false,
             ignore_patterns = { "*.git/*", "*/tmp/*" },
             match_algorithm = "fzf",
             disable_devicons = false,
-            open_buffer_indicators = { previous = "👀", others = "🙈" },
+            -- open_buffer_indicators = { previous = "👀", others = "🙈" },
+            cwd_only = true,
             mappings = {
               i = {
                 ["<cr>"] = stopinsert(function(pb) multi(pb, "vnew") end),

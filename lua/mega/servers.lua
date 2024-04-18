@@ -400,7 +400,7 @@ M.list = {
       },
     },
   },
-  -- ruby_ls = {},
+  -- ruby_lsp = {},
   rust_analyzer = {
     settings = {
       ["rust-analyzer"] = {

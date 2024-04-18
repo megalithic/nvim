@@ -59,19 +59,6 @@ function M.augroup(name, commands)
 end
 
 function M.apply()
-  -- [[ Basic Autocommands ]]
-  --  See `:help lua-guide-autocommands`
-
-  -- vim.api.nvim_create_autocmd('TextYankPost', {
-  --   desc = 'Highlight when yanking (copying) text',
-  --   group = vim.api.nvim_create_augroup('mega.highlight-yank', { clear = true }),
-  --   callback = function()
-  --     vim.highlight.on_yank()
-  --   end,
-  -- })
-
-  print("autocmds.apply")
-
   M.augroup("Startup", {
     {
       event = { "VimEnter" },
@@ -130,29 +117,10 @@ function M.apply()
         end
       end,
     },
-    -- {
-    --   event = { "BufNew" },
-    --   desc = "Edit files with :line at the end",
-    --   pattern = "*",
-    --   command = function(args)
-    --     local bufname = vim.api.nvim_buf_get_name(args.buf)
-    --     local root, line = bufname:match("^(.*):(%d+)$")
-    --     if vim.fn.filereadable(bufname) == 0 and root and line and vim.fn.filereadable(root) == 1 then
-    --       vim.schedule(function()
-    --         vim.cmd.edit({ args = { root } })
-    --         pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line), 0 })
-    --         vim.api.nvim_buf_delete(args.buf, { force = true })
-    --       end)
-    --     end
-    --   end,
-    -- },
   })
 
   M.augroup("highlight-yank", {
     {
-      -- Highlight when yanking (copying) text
-      --  Try it with `yap` in normal mode
-      --  See `:help vim.highlight.on_yank()`
       desc = "Highlight when yanking (copying) text",
       event = { "TextYankPost" },
       command = function() vim.highlight.on_yank() end,

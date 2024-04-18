@@ -46,6 +46,9 @@ return {
         local map = function(keys, func, desc) vim.keymap.set("n", keys, func, { buffer = bufnr, desc = "LSP: " .. desc }) end
         local icons = require("mega.settings").icons
 
+        map("[d", vim.diagnostic.goto_prev, "Go to previous [D]iagnostic message")
+        map("]d", vim.diagnostic.goto_next, "Go to next [D]iagnostic message")
+
         map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
         map("gr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
         map("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
@@ -72,13 +75,50 @@ return {
           })
         end
 
-        vim.diagnostic.config({
-          virtual_text = true,
-          signs = true,
-          update_in_insert = false,
+        -- vim.diagnostic.config({
+        --   virtual_text = true,
+        --   signs = true,
+        --   update_in_insert = false,
+        --   underline = true,
+        --   severity_sort = true,
+        --   float = { border = BORDER_STYLE },
+        -- })
+
+        local vim_diag = vim.diagnostic
+        vim_diag.config({
           underline = true,
+          signs = {
+            text = {
+              [vim_diag.severity.ERROR] = icons.lsp.error, -- alts: ▌
+              [vim_diag.severity.WARN] = icons.lsp.warn,
+              [vim_diag.severity.HINT] = icons.lsp.hint,
+              [vim_diag.severity.INFO] = icons.lsp.info,
+            },
+            numhl = {
+              [vim_diag.severity.ERROR] = "DiagnosticError",
+              [vim_diag.severity.WARN] = "DiagnosticWarn",
+              [vim_diag.severity.HINT] = "DiagnosticHint",
+              [vim_diag.severity.INFO] = "DiagnosticInfo",
+            },
+            texthl = {
+              [vim_diag.severity.ERROR] = "DiagnosticError",
+              [vim_diag.severity.WARN] = "DiagnosticWarn",
+              [vim_diag.severity.HINT] = "DiagnosticHint",
+              [vim_diag.severity.INFO] = "DiagnosticInfo",
+            },
+            -- severity = { min = vim_diag.severity.WARN },
+          },
+          float = {
+            border = BORDER_STYLE,
+            -- max_width = float_width,
+            -- max_height = float_height,
+            -- severity = { min = vim_diag.severity.WARN },
+          },
           severity_sort = true,
-          float = { border = BORDER_STYLE },
+          virtual_text = {
+            severity = { min = vim_diag.severity.WARN },
+          },
+          update_in_insert = false,
         })
 
         vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
@@ -291,6 +331,19 @@ return {
     end,
   },
 
+  {
+    "mhanberg/output-panel.nvim",
+    keys = {
+      {
+        "<leader>lip",
+        ":OutputPanel<CR>",
+        desc = "lsp: open output panel",
+      },
+    },
+    event = "LspAttach",
+    cmd = { "OutputPanel" },
+    config = function() require("output_panel").setup() end,
+  },
   {
     "elixir-tools/elixir-tools.nvim",
     version = "*",
