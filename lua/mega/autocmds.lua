@@ -31,6 +31,7 @@ end
 ---@field nested  boolean
 ---@field once    boolean
 ---@field buffer  number
+---@field enabled boolean
 ---Create an autocommand
 ---returns the group ID so that it can be cleared or manipulated.
 ---@param name string
@@ -42,18 +43,20 @@ function M.augroup(name, commands)
   local id = vim.api.nvim_create_augroup(fmt("mega-%s", name), { clear = true })
 
   for _, autocmd in ipairs(commands) do
-    validate_autocmd(name, autocmd)
-    local is_callback = type(autocmd.command) == "function"
-    vim.api.nvim_create_autocmd(autocmd.event, {
-      group = id,
-      pattern = autocmd.pattern,
-      desc = autocmd.desc,
-      callback = is_callback and autocmd.command or nil,
-      command = not is_callback and autocmd.command or nil,
-      once = autocmd.once,
-      nested = autocmd.nested,
-      buffer = autocmd.buffer,
-    })
+    if autocmd.enabled == nil or autocmd.enabled == true then
+      validate_autocmd(name, autocmd)
+      local is_callback = type(autocmd.command) == "function"
+      vim.api.nvim_create_autocmd(autocmd.event, {
+        group = id,
+        pattern = autocmd.pattern,
+        desc = autocmd.desc,
+        callback = is_callback and autocmd.command or nil,
+        command = not is_callback and autocmd.command or nil,
+        once = autocmd.once,
+        nested = autocmd.nested,
+        buffer = autocmd.buffer,
+      })
+    end
   end
 
   return id
@@ -201,6 +204,56 @@ function M.apply()
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
         end, 1)
       end,
+    },
+  })
+
+  M.augroup("Utilities", {
+    {
+      event = { "BufWritePost" },
+      desc = "chmod +x shell scripts on-demand",
+      command = function(args)
+        local not_executable = vim.fn.getfperm(vim.fn.expand("%")):sub(3, 3) ~= "x"
+        local has_shebang = string.match(vim.fn.getline(1), "^#!")
+        local has_bin = string.match(vim.fn.getline(1), "/bin/")
+        if not_executable and has_shebang and has_bin then
+          vim.notify(fmt("made %s executable", args.file), L.INFO)
+          vim.cmd([[!chmod +x <afile>]])
+          -- vim.cmd([[!chmod a+x <afile>]])
+          -- vim.schedule(function() vim.cmd("edit") end)
+        end
+      end,
+    },
+    -- REF: https://github.com/ribru17/nvim/blob/master/lua/autocmds.lua#L68
+    -->> "RUN ONCE" ON FILE OPEN COMMANDS <<--
+    --
+    {
+      event = { "BufRead", "BufNewFile" },
+      enabled = false,
+      desc = "Prevents comment from being inserted when entering new line in existing comment",
+      command = function()
+        -- allow <CR> to continue block comments only
+        -- https://stackoverflow.com/questions/10726373/auto-comment-new-line-in-vim-only-for-block-comments
+        print("enabled comment")
+        vim.schedule(function()
+          -- TODO: find a way for this to work without changing comment format, to
+          -- allow for automatic comment wrapping when hitting textwidth
+          vim.opt_local.comments:remove("://")
+          vim.opt_local.comments:remove(":--")
+          vim.opt_local.comments:remove(":#")
+          vim.opt_local.comments:remove(":%")
+        end)
+        vim.opt_local.bufhidden = "delete"
+      end,
+    },
+    {
+      event = { "BufNewFile", "BufWritePre" },
+      desc = "Recursive mkdir on-demand",
+      pattern = { "*" },
+      command = [[if @% !~# '\(://\)' | call mkdir(expand('<afile>:p:h'), 'p') | endif]],
+      -- command = function()
+      --   -- @see https://github.com/yutkat/dotfiles/blob/main/.config/nvim/lua/rc/autocmd.lua#L113-L140
+      --   mega.auto_mkdir()
+      -- end,
     },
   })
 end
