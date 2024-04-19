@@ -135,14 +135,15 @@ return {
     end,
   },
 
-  { "nvim-treesitter/nvim-treesitter-textobjects", dependencies = { "nvim-treesitter/nvim-treesitter" } },
-  { "RRethy/nvim-treesitter-textsubjects", dependencies = { "nvim-treesitter/nvim-treesitter" } },
-  { "nvim-treesitter/nvim-tree-docs", dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "nvim-treesitter/nvim-treesitter-textobjects", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "RRethy/nvim-treesitter-textsubjects", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "nvim-treesitter/nvim-tree-docs", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "RRethy/nvim-treesitter-endwise", dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "megalithic/nvim-ts-autotag", dependencies = { "nvim-treesitter/nvim-treesitter" } },
   {
     "andymass/vim-matchup",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
+    cond = false,
     lazy = false,
     config = function()
       vim.g.matchup_matchparen_nomode = "i"
@@ -164,7 +165,7 @@ return {
       vim.g.matchup_text_obj_enabled = 1
     end,
   },
-  { "David-Kunz/treesitter-unit", dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "David-Kunz/treesitter-unit", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "yorickpeterse/nvim-tree-pairs", dependencies = { "nvim-treesitter/nvim-treesitter" }, opts = {} },
   {
     "HiPhish/rainbow-delimiters.nvim",
