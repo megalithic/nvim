@@ -131,6 +131,54 @@ function M.tlen(t)
   return len
 end
 
+-- https://github.com/ibhagwan/fzf-lua/blob/455744b9b2d2cce50350647253a69c7bed86b25f/lua/fzf-lua/utils.lua#L401
+function M.get_visual_selection()
+  -- this will exit visual mode
+  -- use 'gv' to reselect the text
+  local _, csrow, cscol, cerow, cecol
+  local mode = vim.fn.mode()
+  if mode == "v" or mode == "V" or mode == "" then
+    -- if we are in visual mode use the live position
+    _, csrow, cscol, _ = unpack(vim.fn.getpos("."))
+    _, cerow, cecol, _ = unpack(vim.fn.getpos("v"))
+    if mode == "V" then
+      -- visual line doesn't provide columns
+      cscol, cecol = 0, 999
+    end
+    -- exit visual mode
+    vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "n", true)
+  else
+    -- otherwise, use the last known visual position
+    _, csrow, cscol, _ = unpack(vim.fn.getpos("'<"))
+    _, cerow, cecol, _ = unpack(vim.fn.getpos("'>"))
+  end
+  -- swap vars if needed
+  if cerow < csrow then
+    csrow, cerow = cerow, csrow
+  end
+  if cecol < cscol then
+    cscol, cecol = cecol, cscol
+  end
+  local lines = vim.fn.getline(csrow, cerow)
+  -- local n = cerow-csrow+1
+  local n = M.tlen(lines)
+  if n <= 0 then return "" end
+  lines[n] = string.sub(lines[n], 1, cecol)
+  lines[1] = string.sub(lines[1], cscol)
+  return table.concat(lines, "\n")
+end
+
+-- OR --------------------------------------------------------------------------
+-- REF: https://github.com/fdschmidt93/dotfiles/blob/master/nvim/.config/nvim/lua/fds/utils/init.lua
+function M.get_selection()
+  local rv = vim.fn.getreg("v")
+  local rt = vim.fn.getregtype("v")
+  vim.cmd([[noautocmd silent normal! "vy]])
+  local selection = vim.fn.getreg("v")
+  vim.fn.setreg("v", rv, rt)
+  return vim.split(selection, "\n")
+end
+
 --- automatically clear commandline messages after a few seconds delay
 --- source: http://unix.stackexchange.com/a/613645
 ---@return function
@@ -196,7 +244,7 @@ function M.is_chonky(bufnr, filepath)
   local is_too_long = vim.api.nvim_buf_line_count(bufnr) >= max_length
   local is_too_large = false
 
-  local ok, stats = pcall(vim.loop.fs_stat, filepath)
+  local ok, stats = pcall(vim.uv.fs_stat, filepath)
   if ok and stats and stats.size > max_filesize then is_too_large = true end
 
   return (is_too_long or is_too_large)
@@ -244,7 +292,7 @@ function M.empty(item)
 end
 
 function M.debounce(ms, fn)
-  local timer = vim.loop.new_timer()
+  local timer = vim.uv.new_timer()
   return function(...)
     local argv = { ... }
     timer:start(ms, 0, function()
@@ -255,7 +303,7 @@ function M.debounce(ms, fn)
 end
 
 function M.throttle(ms, fn)
-  local timer = vim.loop.new_timer()
+  local timer = vim.uv.new_timer()
   local running = false
   return function(...)
     if not running then
@@ -281,7 +329,7 @@ end
 -- @returns (function, timer) Debounced function and timer. Remember to call
 ---`timer:close()` at the end or you will leak memory!
 function M.debounce_trailing(func, ms, first)
-  local timer = vim.loop.new_timer()
+  local timer = vim.uv.new_timer()
   local wrapped_fn
 
   if not first then
