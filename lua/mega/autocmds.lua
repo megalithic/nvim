@@ -79,7 +79,6 @@ function M.apply()
         -- TODO: handle situations where 2 file names given and the second is of the shape of a line number, e.g. `:200`;
         -- maybe use this? https://github.com/stevearc/dotfiles/commit/db4849d91328bb6f39481cf2e009866911c31757
         local startup_args = vim.api.nvim_eval("argv()")
-        vim.pprint(startup_args)
 
         if startup_allowed() then
           -- cli_args > 1; usually a few files to open in splits, or a file and a `:ln_no`
