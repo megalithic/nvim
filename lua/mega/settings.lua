@@ -328,6 +328,7 @@ M.apply = function()
 
       -- Don't show the mode, since it's already in the status line
       showmode = false,
+      showcmd = false,
 
       -- Sync clipboard between OS and Neovim.
       --  Remove this option if you want your OS clipboard to remain independent.
@@ -373,6 +374,10 @@ M.apply = function()
 
       -- Set highlight on search, but clear on pressing <Esc> in normal mode
       hlsearch = true,
+
+      -- Tabline
+      tabline = "",
+      showtabline = 0,
     },
   }
 

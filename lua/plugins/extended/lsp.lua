@@ -38,6 +38,27 @@ return {
       local augroup = require("mega.autocmds").augroup
       require("lspconfig.ui.windows").default_options.border = BORDER_STYLE
 
+      local function has_existing_floats()
+        local winids = vim.api.nvim_tabpage_list_wins(0)
+        for _, winid in ipairs(winids) do
+          if vim.api.nvim_win_get_config(winid).zindex then return true end
+        end
+      end
+
+      local function diagnostic_popup(opts)
+        local bufnr = opts
+        if type(opts) == "table" then bufnr = opts.buf end
+
+        if not vim.g.git_conflict_detected and not has_existing_floats() then
+          -- Try to open diagnostics under the cursor
+          local diags = vim.diagnostic.open_float(bufnr, { focus = false, scope = "cursor" })
+          if not diags then -- If there's no diagnostic under the cursor show diagnostics of the entire line
+            vim.diagnostic.open_float(bufnr, { focus = false, scope = "line" })
+          end
+          return diags
+        end
+      end
+
       --  This function gets run when an LSP attaches to a particular buffer.
       --    That is to say, every time a new file is opened that is associated with
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
@@ -60,8 +81,16 @@ return {
         map("K", vim.lsp.buf.hover, "Hover Documentation")
         map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration (e.g. to a header file in C)")
 
+        augroup("LspDiagnostics", {
+          {
+            event = { "CursorHold" },
+            desc = "Show diagnostics",
+            command = diagnostic_popup,
+          },
+        })
+
         if client and client.server_capabilities.documentHighlightProvider then
-          augroup("LSP-document-highlights", {
+          augroup("LspDocumentHighlights", {
             {
               event = { "CursorHold", "CursorHoldI" },
               buffer = bufnr,
@@ -75,14 +104,8 @@ return {
           })
         end
 
-        -- vim.diagnostic.config({
-        --   virtual_text = true,
-        --   signs = true,
-        --   update_in_insert = false,
-        --   underline = true,
-        --   severity_sort = true,
-        --   float = { border = BORDER_STYLE },
-        -- })
+        local max_width = math.min(math.floor(vim.o.columns * 0.7), 100)
+        local max_height = math.min(math.floor(vim.o.lines * 0.3), 30)
 
         local vim_diag = vim.diagnostic
         vim_diag.config({
@@ -109,24 +132,24 @@ return {
             -- severity = { min = vim_diag.severity.WARN },
           },
           float = {
-            border = BORDER_STYLE,
-            -- max_width = float_width,
-            -- max_height = float_height,
+            -- border = BORDER_STYLE,
+            max_width = max_width,
+            max_height = max_height,
             -- severity = { min = vim_diag.severity.WARN },
           },
           severity_sort = true,
           virtual_text = {
-            severity = { min = vim_diag.severity.WARN },
+            severity = { min = vim_diag.severity.ERROR },
           },
           update_in_insert = false,
         })
 
-        vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
-          border = BORDER_STYLE,
-        })
-        vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
-          border = BORDER_STYLE,
-        })
+        -- vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+        --   border = BORDER_STYLE,
+        -- })
+        -- vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+        --   border = BORDER_STYLE,
+        -- })
 
         local signs = { Error = icons.lsp.error, Warn = icons.lsp.warn, Hint = icons.lsp.hint, Info = icons.lsp.info }
         for type, icon in pairs(signs) do
@@ -161,7 +184,7 @@ return {
         }
       end
 
-      augroup("LSP", {
+      augroup("LspAttach", {
         {
           event = { "LspAttach" },
           desc = "",

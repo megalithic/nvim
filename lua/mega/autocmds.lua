@@ -44,7 +44,7 @@ function M.augroup(name, commands)
     validate_autocmd(name, autocmd)
     local is_callback = type(autocmd.command) == "function"
     vim.api.nvim_create_autocmd(autocmd.event, {
-      group = id,
+      group = "mega-" .. id,
       pattern = autocmd.pattern,
       desc = autocmd.desc,
       callback = is_callback and autocmd.command or nil,
@@ -119,11 +119,62 @@ function M.apply()
     },
   })
 
-  M.augroup("highlight-yank", {
+  M.augroup("HighlightYank", {
     {
       desc = "Highlight when yanking (copying) text",
       event = { "TextYankPost" },
       command = function() vim.highlight.on_yank() end,
+    },
+  })
+
+  M.augroup("CheckOutsideTime", {
+    desc = "Automatically check for changed files outside vim",
+    event = { "WinEnter", "BufWinEnter", "BufWinLeave", "BufRead", "BufEnter", "FocusGained" },
+    command = "silent! checktime",
+  })
+
+  M.augroup("SmartCloseBuffers", {
+    {
+      event = { "FileType" },
+      desc = "Smart close certain filetypes with `q`",
+      pattern = { "*" },
+      command = function()
+        local is_unmapped = vim.fn.hasmapto("q", "n") == 0
+        local is_eligible = is_unmapped
+          or vim.wo.previewwindow
+          or vim.tbl_contains({}, vim.bo.buftype)
+          or vim.tbl_contains({
+            "help",
+            "git-status",
+            "git-log",
+            "oil",
+            "dbui",
+            "fugitive",
+            "fugitiveblame",
+            "LuaTree",
+            "log",
+            "tsplayground",
+            "startuptime",
+            "outputpanel",
+            "preview",
+            "qf",
+            "man",
+            "terminal",
+            "lspinfo",
+            "neotest-output",
+            "neotest-output-panel",
+            "query",
+            "elixirls",
+          }, vim.bo.filetype)
+        if is_eligible then
+          map("n", "q", function()
+            if vim.fn.winnr("$") ~= 1 then
+              vim.api.nvim_win_close(0, true)
+              vim.cmd("wincmd p")
+            end
+          end, { buffer = 0, nowait = true, desc = "smart buffer quit" })
+        end
+      end,
     },
   })
 end

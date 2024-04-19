@@ -1,0 +1,6 @@
+-- local ftplugin = mega.req("mega.utils.ftplugin")
+--
+-- ftplugin.extend_all({
+-- })
+--
+-- ftplugin.setup()

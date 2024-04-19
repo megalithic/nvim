@@ -147,6 +147,46 @@ function M.clear_commandline()
   end
 end
 
+-- https://www.reddit.com/r/neovim/comments/nrz9hp/can_i_close_all_floating_windows_without_closing/h0lg5m1/
+function M.close_floats()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) then
+      local config = vim.api.nvim_win_get_config(win)
+      if config.relative ~= "" then vim.api.nvim_win_close(win, false) end
+    end
+  end
+end
+
+function M.clear_ui(opts)
+  opts = opts or {}
+  local deluxe = opts["deluxe"]
+  -- vcmd([[nnoremap <silent><ESC> :syntax sync fromstart<CR>:nohlsearch<CR>:redrawstatus!<CR><ESC> ]])
+  -- Clear / search term
+  -- vim.fn.setreg("/", "")
+
+  -- Stop highlighting searches
+  vim.cmd.nohlsearch()
+
+  vim.cmd.diffupdate()
+  vim.cmd("syntax sync fromstart")
+  M.close_floats()
+
+  pcall(mega.blink_cursorline)
+  vim.cmd.redraw({ bang = true })
+
+  do
+    local ok, mj = pcall(require, "mini.jump")
+    if ok then mj.stop_jumping() end
+  end
+
+  do
+    local ok, n = pcall(require, "notify")
+    if ok then n.dismiss() end
+  end
+
+  M.clear_commandline()
+end
+
 function M.is_chonky(bufnr, filepath)
   local max_filesize = 50 * 1024 -- 50 KB
   local max_length = 5000
