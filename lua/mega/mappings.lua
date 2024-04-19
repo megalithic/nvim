@@ -56,6 +56,21 @@ map("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 map({ "n", "x", "o" }, "n", "nzz")
 map({ "n", "x", "o" }, "N", "Nzz")
 
+-- [[ macros ]] -------------------------------------------------------------------------------------------------------
+-- Map Q to replay q register for macro
+map("n", "q", "<Nop>")
+map("n", "<localleader>q", "q", { desc = "macros: start macro" })
+map("n", "Q", "@qj", { desc = "macros: run `q` macro" })
+map("n", "Q", ":norm @q<CR>", { desc = "macros: run `q` macro (selection)" })
+
+-- [[ folds ]] -------------------------------------------------------------------------------------------------------
+map("n", "<leader>z", "za", { desc = "Toggle current fold" })
+map("x", "<leader>z", "zf", { desc = "Create fold from selection" })
+map("n", "zf", function() vim.cmd.normal("zMzv") end, { desc = "Fold all except current" })
+map("n", "zF", function() vim.cmd.normal("zMzvzczo") end, { desc = "Fold all except current and children of current" })
+map("n", "zO", function() vim.cmd.normal("zR") end, { desc = "Open all folds" })
+map("n", "zo", "zO", { desc = "Open all folds descending from current line" })
+
 -- [[ plugin management ]] -------------------------------------------------------------------------------------------------------
 map("n", "<leader>ps", "<cmd>Lazy sync<cr>", { desc = "[lazy] sync plugins" })
 
