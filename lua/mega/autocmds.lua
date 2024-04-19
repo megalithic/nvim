@@ -1,4 +1,5 @@
 local fmt = string.format
+local map = vim.keymap.set
 local SETTINGS = require("mega.settings")
 local U = require("mega.utils")
 
@@ -214,6 +215,19 @@ function M.apply()
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
         end, 1)
       end,
+    },
+  })
+
+  M.augroup("InsertBehaviours", {
+    {
+      desc = "OnInsertEnter",
+      event = { "InsertEnter" },
+      command = function(evt) vim.diagnostic.disable() end,
+    },
+    {
+      desc = "OnInsertLeave",
+      event = { "InsertEnter" },
+      command = function(evt) vim.diagnostic.enable() end,
     },
   })
 
