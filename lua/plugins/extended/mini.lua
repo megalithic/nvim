@@ -1,4 +1,59 @@
+local SETTINGS = mega.req("mega.settings")
 return {
+  {
+    "echasnovski/mini.indentscope",
+    config = function()
+      mega.req("mini.indentscope").setup({
+        symbol = SETTINGS.indent_scope_char,
+        -- mappings = {
+        --   goto_top = "<leader>k",
+        --   goto_bottom = "<leader>j",
+        -- },
+        draw = {
+          delay = 10,
+          animation = function() return 0 end,
+        },
+        options = { try_as_border = true, border = "both", indent_at_cursor = true },
+      })
+
+      mega.req("mega.autocmds").augroup("mini.indentscope", {
+        {
+          event = "FileType",
+          pattern = {
+            "help",
+            "alpha",
+            "dashboard",
+            "neo-tree",
+            "Trouble",
+            "lazy",
+            "mason",
+            "fzf",
+            "dirbuf",
+            "terminal",
+            "fzf-lua",
+            "fzflua",
+            "megaterm",
+            "nofile",
+            "terminal",
+            "megaterm",
+            "lsp-installer",
+            "SidebarNvim",
+            "lspinfo",
+            "markdown",
+            "help",
+            "startify",
+            "packer",
+            "NeogitStatus",
+            "oil",
+            "DirBuf",
+            "markdown",
+          },
+          command = function() vim.b.miniindentscope_disable = true end,
+        },
+      })
+    end,
+  },
+
   {
     "echasnovski/mini.surround",
     keys = {
