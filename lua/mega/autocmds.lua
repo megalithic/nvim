@@ -233,7 +233,6 @@ function M.apply()
       command = function()
         -- allow <CR> to continue block comments only
         -- https://stackoverflow.com/questions/10726373/auto-comment-new-line-in-vim-only-for-block-comments
-        print("enabled comment")
         vim.schedule(function()
           -- TODO: find a way for this to work without changing comment format, to
           -- allow for automatic comment wrapping when hitting textwidth
