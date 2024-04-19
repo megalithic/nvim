@@ -1,4 +1,5 @@
 local BORDER_STYLE = require("mega.settings").border
+local augroup = require("mega.autocmds").augroup
 
 return {
   {
@@ -35,7 +36,6 @@ return {
       { "folke/neodev.nvim", opts = {} },
     },
     config = function()
-      local augroup = require("mega.autocmds").augroup
       require("lspconfig.ui.windows").default_options.border = BORDER_STYLE
 
       local function has_existing_floats()
