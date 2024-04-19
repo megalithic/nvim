@@ -1,4 +1,5 @@
 local fmt = string.format
+local SETTINGS = require("mega.settings")
 local U = require("mega.utils")
 
 local M = {}
@@ -38,13 +39,13 @@ end
 function M.augroup(name, commands)
   assert(name ~= "User", "The name of an augroup CANNOT be User")
 
-  local id = vim.api.nvim_create_augroup(name, { clear = true })
+  local id = vim.api.nvim_create_augroup(fmt("mega-%s", name), { clear = true })
 
   for _, autocmd in ipairs(commands) do
     validate_autocmd(name, autocmd)
     local is_callback = type(autocmd.command) == "function"
     vim.api.nvim_create_autocmd(autocmd.event, {
-      group = "mega-" .. id,
+      group = id,
       pattern = autocmd.pattern,
       desc = autocmd.desc,
       callback = is_callback and autocmd.command or nil,
@@ -174,6 +175,31 @@ function M.apply()
             end
           end, { buffer = 0, nowait = true, desc = "smart buffer quit" })
         end
+      end,
+    },
+  })
+
+  M.augroup("EnterLeaveBehaviours", {
+    {
+      desc = "Enable things on *Enter",
+      event = { "BufEnter" },
+      command = function(evt)
+        vim.defer_fn(function()
+          -- enable ibl for active buffer
+          local ibl_ok, ibl = pcall(require, "ibl")
+          if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
+        end, 1)
+      end,
+    },
+    {
+      desc = "Disable things on *Leave",
+      event = { "BufLeave" },
+      command = function(evt)
+        vim.defer_fn(function()
+          -- disable ibl for inactive buffer
+          local ibl_ok, ibl = pcall(require, "ibl")
+          if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
+        end, 1)
       end,
     },
   })

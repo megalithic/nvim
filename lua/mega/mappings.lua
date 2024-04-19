@@ -40,7 +40,7 @@ map("i", "?", "?<C-g>u")
 -- [[ better movements within a buffer ]] -------------------------------------------------------------------------------------------------------
 map("n", "H", "^")
 map("n", "L", "$")
-map("v", "L", "g_")
+map({ "v", "x" }, "L", "g_")
 map("n", "0", "^")
 
 -- Map <localleader>o & <localleader>O to newline without insert mode
