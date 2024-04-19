@@ -168,6 +168,8 @@ return {
   { "yorickpeterse/nvim-tree-pairs", dependencies = { "nvim-treesitter/nvim-treesitter" }, opts = {} },
   {
     "HiPhish/rainbow-delimiters.nvim",
+    -- FIXME: MIGHT be causing segfaults
+    cond = false,
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     event = "VimEnter",
     config = function()
