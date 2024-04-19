@@ -4,25 +4,6 @@ local U = require("mega.utils")
 
 local M = {}
 
---- Validate the keys passed to mega.augroup are valid
----@param name string
----@param cmd Autocommand
-local function validate_autocmd(name, cmd)
-  local keys = { "event", "buffer", "pattern", "desc", "callback", "command", "group", "once", "nested" }
-  local incorrect = U.fold(function(accum, _, key)
-    if not vim.tbl_contains(keys, key) then table.insert(accum, key) end
-    return accum
-  end, cmd, {})
-  if #incorrect == 0 then return end
-  vim.schedule(
-    function()
-      vim.notify("Incorrect keys: " .. table.concat(incorrect, ", "), vim.log.levels.ERROR, {
-        title = fmt("Autocmd: %s", name),
-      })
-    end
-  )
-end
-
 ---@class Autocommand
 ---@field desc string
 ---@field event  string[] list of autocommand events
@@ -32,12 +13,32 @@ end
 ---@field once    boolean
 ---@field buffer  number
 ---@field enabled boolean
+
 ---Create an autocommand
 ---returns the group ID so that it can be cleared or manipulated.
 ---@param name string
 ---@param ... Autocommand A list of autocommands to create (variadic parameter)
 ---@return number
 function M.augroup(name, commands)
+  --- Validate the keys passed to mega.augroup are valid
+  ---@param name string
+  ---@param cmd Autocommand
+  local function validate_autocmd(name, cmd)
+    local keys = { "event", "buffer", "pattern", "desc", "callback", "command", "group", "once", "nested" }
+    local incorrect = U.fold(function(accum, _, key)
+      if not vim.tbl_contains(keys, key) then table.insert(accum, key) end
+      return accum
+    end, cmd, {})
+    if #incorrect == 0 then return end
+    vim.schedule(
+      function()
+        vim.notify("Incorrect keys: " .. table.concat(incorrect, ", "), vim.log.levels.ERROR, {
+          title = fmt("Autocmd: %s", name),
+        })
+      end
+    )
+  end
+
   assert(name ~= "User", "The name of an augroup CANNOT be User")
 
   local id = vim.api.nvim_create_augroup(fmt("mega-%s", name), { clear = true })
@@ -124,7 +125,8 @@ function M.apply()
               end
             end
           else
-            mega.picker.startup()
+            -- just opening vim without any arguments, just executes our preferred startup method
+            mega.picker.startup(args.buf)
           end
         end
       end,
@@ -215,6 +217,31 @@ function M.apply()
     },
   })
 
+  M.augroup("CursorMovementBehaviours", {
+    {
+      desc = "Disable things on CursorMoved",
+      event = { "CursorMoved" },
+      command = function(evt)
+        vim.defer_fn(function()
+          local ibl_ok, ibl = pcall(require, "ibl")
+          if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
+          -- vim.b.miniindentscope_disable = true
+        end, 1)
+      end,
+    },
+    {
+      desc = "Enable things on CursorHold",
+      event = { "CursorHold" },
+      command = function(evt)
+        vim.defer_fn(function()
+          local ibl_ok, ibl = pcall(require, "ibl")
+          if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
+          -- vim.b.miniindentscope_disable = false
+        end, 2)
+      end,
+    },
+  })
+
   M.augroup("Utilities", {
     {
       event = { "BufWritePost" },
@@ -225,8 +252,7 @@ function M.apply()
         local has_bin = string.match(vim.fn.getline(1), "/bin/")
         if not_executable and has_shebang and has_bin then
           vim.notify(fmt("made %s executable", args.file), L.INFO)
-          vim.cmd([[!chmod +x <afile>]])
-          -- vim.cmd([[!chmod a+x <afile>]])
+          vim.cmd([[!chmod +x <afile>]]) -- or a+x ?
           -- vim.schedule(function() vim.cmd("edit") end)
         end
       end,
