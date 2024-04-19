@@ -68,26 +68,33 @@ function M.apply()
       event = { "VimEnter" },
       pattern = { "*" },
       once = true,
-      desc = "Crazy behaviours for opening vim with arguments (or not)",
+      desc = "Advanced startup behaviours based upon the arguments given..",
       command = function(args)
+        local startup_allowed = function()
+          return not vim.g.started_by_firenvim
+            and (not vim.env.TMUX_POPUP and vim.env.TMUX_POPUP ~= 1)
+            and not vim.tbl_contains({ "NeogitStatus" }, vim.bo[args.buf].filetype)
+        end
+
         -- TODO: handle situations where 2 file names given and the second is of the shape of a line number, e.g. `:200`;
         -- maybe use this? https://github.com/stevearc/dotfiles/commit/db4849d91328bb6f39481cf2e009866911c31757
-        local arg = vim.api.nvim_eval("argv(0)")
-        -- print("startup")
-        -- print(vim.inspect(arg))
+        local startup_args = vim.api.nvim_eval("argv()")
+        vim.pprint(startup_args)
 
-        if
-          not vim.g.started_by_firenvim
-          and (not vim.env.TMUX_POPUP and vim.env.TMUX_POPUP ~= 1)
-          and not vim.tbl_contains({ "NeogitStatus" }, vim.bo[args.buf].filetype)
-        then
-          if vim.fn.argc() > 1 then
-            local linenr = string.match(vim.fn.argv(1), "^:(%d+)$")
-            if string.find(vim.fn.argv(1), "^:%d*") ~= nil then
-              vim.cmd.edit({ args = { vim.fn.argv(0) } })
+        if startup_allowed() then
+          -- cli_args > 1; usually a few files to open in splits, or a file and a `:ln_no`
+          if #startup_args > 1 then
+            -- we opened a file, and a line_no (e.g. path/to/file.txt :20)
+            local linenr = string.match(startup_args[1], "^:(%d+)$")
+            if string.find(startup_args[1], "^:%d*") ~= nil then
+              -- open the file
+              vim.cmd.edit({ args = { startup_args[0] } })
+              -- jump to the line number
               pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(linenr), 0 })
+              -- delete the empty buffer that got opened, too
               vim.api.nvim_buf_delete(args.buf + 1, { force = true })
             else
+              -- we've simply opened a few files that need to be opened in splits and resized accordingly
               vim.schedule(function()
                 -- mega.resize_windows(args.buf)
                 -- require("virt-column").update()
@@ -95,28 +102,30 @@ function M.apply()
                 pcall(require("virt-column").update)
               end)
             end
-          elseif vim.fn.argc() == 1 then
-            if vim.fn.isdirectory(arg) == 1 then
-              -- require("oil").open(arg)
+          -- we've passed in one (1) startup argument
+          elseif #startup_args == 1 then
+            -- our startup arg is a directory, according to vim..
+            if vim.fn.isdirectory(startup_args[0]) == 1 then
+              -- so, let's use oil to open the list of files/folders
               local ok, oil = pcall(require, "oil")
               if ok then oil.open(arg) end
             else
-              -- handle editing an argument with `:300`(line number) at the end
+              -- handle editing an argument with `:300`(line number) at the end (e.g. this is when we have path/to/file.txt:20)
               local bufname = vim.api.nvim_buf_get_name(args.buf)
               local root, line = bufname:match("^(.*):(%d+)$")
               if vim.fn.filereadable(bufname) == 0 and root and line and vim.fn.filereadable(root) == 1 then
                 vim.schedule(function()
+                  -- open the file
                   vim.cmd.edit({ args = { root } })
+                  -- jump to the line number
                   pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line), 0 })
+                  -- delete the empty buffer that got opened, too
                   vim.api.nvim_buf_delete(args.buf, { force = true })
                 end)
               end
             end
-          elseif vim.fn.isdirectory(arg) == 1 then
-            local ok, oil = pcall(require, "oil")
-            if ok then oil.open(arg) end
-            -- elseif _G.picker ~= nil and _G.picker[vim.g.picker] ~= nil and _G.picker[vim.g.picker]["startup"] then
-            --   _G.picker[vim.g.picker]["startup"](args)
+          else
+            mega.picker.startup()
           end
         end
       end,

@@ -48,6 +48,11 @@ return {
       -- { "altermo/telescope-nucleo-sorter.nvim", build = "cargo build --release" },
     },
     config = function()
+      mega.picker = {
+        find_files = {},
+        grep = {},
+      }
+
       local fmt = string.format
       local map = vim.keymap.set
       local telescope = require("telescope")
@@ -58,6 +63,7 @@ return {
       local lga_actions = require("telescope-live-grep-args.actions")
       local previewers = require("telescope.previewers")
       local Job = require("plenary.job")
+      local current_fn = nil
 
       require("mega.autocmds").augroup("Telescope", {
         {
@@ -178,6 +184,80 @@ return {
         return opts
       end
 
+      local function stopinsert(callback)
+        return function(prompt_bufnr)
+          vim.cmd.stopinsert()
+          vim.schedule(function() callback(prompt_bufnr) end)
+        end
+      end
+
+      local function dropdown(opts)
+        opts = vim.tbl_deep_extend("force", opts or {}, {})
+        return require("telescope.themes").get_dropdown(get_border(opts))
+      end
+
+      local function ivy(opts)
+        opts = vim.tbl_deep_extend("force", opts or {}, { layout_config = { height = 0.3 } })
+        return require("telescope.themes").get_ivy(get_border(opts))
+      end
+
+      local grep = function(...) ts.grep(ivy(...)) end
+      mega.picker.grep = grep
+
+      -- Gets the root dir from either:
+      -- * connected lsp
+      -- * .git from file
+      -- * .git from cwd
+      -- * cwd
+      ---@param opts? table
+      local find_files = function(opts)
+        opts = opts or {}
+        local theme = opts["theme"] or "ivy"
+        local bufnr = vim.api.nvim_get_current_buf()
+        local fn = vim.api.nvim_buf_get_name(bufnr)
+
+        current_fn = fn
+        -- opts.cwd = require("mega.utils").get_root()
+        -- vim.notify(fmt("current project files root: %s", opts.cwd), vim.log.levels.DEBUG, { title = "telescope" })
+        local picker = ts.find_files
+
+        if theme == "ivy" then
+          picker(ivy(opts))
+        elseif theme == "dropdown" then
+          picker(dropdown(opts))
+        else
+          picker(opts)
+        end
+      end
+      mega.picker.find_files = find_files
+      mega.picker.startup = function()
+        find_files({
+          theme = "dropdown",
+          hidden = true,
+          no_ignore = false,
+          previewer = false,
+          prompt_title = "",
+          preview_title = "",
+          results_title = "",
+          layout_config = { prompt_position = "top" },
+          -- FIXME: this simply will not work; unable to override defaults
+          mappings = {
+            i = {
+              ["<cr>"] = stopinsert(function(pb)
+                multi(pb, "edit")
+                vim.api.nvim_buf_delete(1, { force = true })
+              end),
+            },
+            n = {
+              ["<cr>"] = function(pb)
+                multi(pb, "vnew")
+                vim.api.nvim_buf_delete(args.buf + 1, { force = true })
+              end,
+            },
+          },
+        })
+      end
+
       local fd_find_command = { "fd", "--type", "f", "--hidden", "--no-ignore-vcs", "--strip-cwd-prefix" }
       local rg_find_command = {
         "rg",
@@ -209,7 +289,6 @@ return {
         "--trim",
       }
 
-      local current_fn = nil
       local function multi(pb, verb, open_selection_under_cursor)
         open_selection_under_cursor = open_selection_under_cursor or false
         local methods = {
@@ -246,23 +325,6 @@ return {
         -- else
         --   actions.file_edit(pb)
         -- end
-      end
-
-      local function stopinsert(callback)
-        return function(prompt_bufnr)
-          vim.cmd.stopinsert()
-          vim.schedule(function() callback(prompt_bufnr) end)
-        end
-      end
-
-      local function dropdown(opts)
-        opts = vim.tbl_deep_extend("force", opts or {}, {})
-        return require("telescope.themes").get_dropdown(get_border(opts))
-      end
-
-      local function ivy(opts)
-        opts = vim.tbl_deep_extend("force", opts or {}, { layout_config = { height = 0.3 } })
-        return require("telescope.themes").get_ivy(get_border(opts))
       end
 
       local function file_extension_filter(prompt)
@@ -310,15 +372,17 @@ return {
           buffer_previewer_maker = new_maker,
           preview = {
             mime_hook = function(filepath, bufnr, opts)
-              local is_image = function(filepath)
+              local is_image = function(fp)
                 local image_extensions = { "png", "jpg" } -- Supported image formats
-                local split_path = vim.split(filepath:lower(), ".", { plain = true })
+                local split_path = vim.split(fp:lower(), ".", { plain = true })
                 local extension = split_path[#split_path]
                 return vim.tbl_contains(image_extensions, extension)
               end
+
               if is_image(filepath) then
                 local term = vim.api.nvim_open_term(bufnr, {})
                 local function send_output(_, data, _)
+                  vim.pprint(data)
                   for _, d in ipairs(data) do
                     vim.api.nvim_chan_send(term, d .. "\r\n")
                   end
