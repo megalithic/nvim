@@ -1,5 +1,6 @@
 local BORDER_STYLE = require("mega.settings").border
 local augroup = require("mega.autocmds").augroup
+local fmt = string.format
 
 return {
   {
@@ -36,6 +37,16 @@ return {
       { "folke/neodev.nvim", opts = {} },
     },
     config = function()
+      local diagnostic_ns = vim.api.nvim_create_namespace("hldiagnosticregion")
+      local diagnostic_timer
+      local hl_cancel
+      local hl_map = {
+        [vim.diagnostic.severity.ERROR] = "DiagnosticVirtualTextError",
+        [vim.diagnostic.severity.WARN] = "DiagnosticVirtualTextWarn",
+        [vim.diagnostic.severity.HINT] = "DiagnosticVirtualTextHint",
+        [vim.diagnostic.severity.INFO] = "DiagnosticVirtualTextInfo",
+      }
+
       require("lspconfig.ui.windows").default_options.border = BORDER_STYLE
 
       local function has_existing_floats()
@@ -49,14 +60,42 @@ return {
         local bufnr = opts
         if type(opts) == "table" then bufnr = opts.buf end
 
-        if not vim.g.git_conflict_detected and not has_existing_floats() then
-          -- Try to open diagnostics under the cursor
-          local diags = vim.diagnostic.open_float(bufnr, { focus = false, scope = "cursor" })
-          if not diags then -- If there's no diagnostic under the cursor show diagnostics of the entire line
-            vim.diagnostic.open_float(bufnr, { focus = false, scope = "line" })
-          end
-          return diags
+        local diags = vim.diagnostic.open_float(bufnr, { focus = false, scope = "cursor" })
+
+        -- If there's no diagnostic under the cursor show diagnostics of the entire line
+        if not diags then vim.diagnostic.open_float(bufnr, { focus = false, scope = "line" }) end
+
+        -- if not vim.g.git_conflict_detected and not has_existing_floats() then
+        --   -- Try to open diagnostics under the cursor
+        --   local diags = vim.diagnostic.open_float(bufnr, { focus = false, scope = "cursor" })
+        --
+        --   -- If there's no diagnostic under the cursor show diagnostics of the entire line
+        --   if not diags then vim.diagnostic.open_float(bufnr, { focus = false, scope = "line" }) end
+        --
+        --   return diags
+        -- end
+      end
+
+      local function goto_diagnostic_hl(dir)
+        assert(dir == "prev" or dir == "next")
+        local diagnostic = vim.diagnostic["get_" .. dir]()
+        if not diagnostic then return end
+        if diagnostic_timer then
+          diagnostic_timer:close()
+          hl_cancel()
         end
+        vim.api.nvim_buf_set_extmark(0, diagnostic_ns, diagnostic.lnum, diagnostic.col, {
+          end_row = diagnostic.end_lnum,
+          end_col = diagnostic.end_col,
+          hl_group = hl_map[diagnostic.severity],
+        })
+        hl_cancel = function()
+          diagnostic_timer = nil
+          hl_cancel = nil
+          pcall(vim.api.nvim_buf_clear_namespace, 0, diagnostic_ns, 0, -1)
+        end
+        diagnostic_timer = vim.defer_fn(hl_cancel, 500)
+        vim.diagnostic["goto_" .. dir]()
       end
 
       --  This function gets run when an LSP attaches to a particular buffer.
@@ -64,14 +103,33 @@ return {
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
       local function on_attach(bufnr, client)
+        -- if action opens up qf list, open the first item and close the list
+        local function choose_list_first(options)
+          vim.fn.setqflist({}, " ", options)
+          vim.cmd.cfirst()
+        end
         local map = function(keys, func, desc) vim.keymap.set("n", keys, func, { buffer = bufnr, desc = "LSP: " .. desc }) end
         local icons = require("mega.settings").icons
 
-        map("[d", vim.diagnostic.goto_prev, "Go to previous [D]iagnostic message")
-        map("]d", vim.diagnostic.goto_next, "Go to next [D]iagnostic message")
+        -- if client and client.supports_method("textDocument/inlayHint", { bufnr = bufnr }) then
+        --   vim.lsp.inlay_hint.enable(bufnr, true)
+        --   -- vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+        -- end
 
-        map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
-        map("gr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
+        map("<leader>lic", [[<cmd>LspInfo<CR>]], "connected client info")
+        map("<leader>lim", [[<cmd>Mason<CR>]], "mason info")
+        map("<leader>lil", [[<cmd>LspLog<CR>]], "logs (vsplit)")
+
+        map("[d", function() goto_diagnostic_hl("prev") end, "Go to previous [D]iagnostic message")
+        map("]d", function() goto_diagnostic_hl("next") end, "Go to next [D]iagnostic message")
+
+        -- map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
+        map("gd", function() vim.lsp.buf.definition({ on_list = choose_list_first }) end, "[g]oto [d]efinition")
+        map("gD", function()
+          vim.cmd.split({ mods = { tab = vim.fn.tabpagenr() + 1 } })
+          vim.lsp.buf.definition({ on_list = choose_list_first })
+        end, "[g]oto [d]efinition (split)")
+        map("gr", require("telescope.builtin").lsp_references, "[g]oto [r]eferences")
         map("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
         map("<leader>D", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition")
         map("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols")
@@ -80,6 +138,48 @@ return {
         map("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
         map("K", vim.lsp.buf.hover, "Hover Documentation")
         map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration (e.g. to a header file in C)")
+
+        map("gn", function()
+          bufnr = vim.api.nvim_get_current_buf()
+          local params = vim.lsp.util.make_position_params()
+          local current_symbol = vim.fn.expand("<cword>")
+          params.old_symbol = current_symbol
+          params.context = { includeDeclaration = true }
+          local clients = vim.lsp.get_clients()
+          client = clients[1]
+          for _, possible_client in pairs(clients) do
+            if possible_client.server_capabilities.renameProvider then
+              client = possible_client
+              break
+            end
+          end
+          local ns = vim.api.nvim_create_namespace("LspRenamespace")
+
+          client.request("textDocument/references", params, function(_, result)
+            if not result or vim.tbl_isempty(result) then
+              vim.notify("Nothing to rename.")
+              return
+            end
+
+            for _, v in ipairs(result) do
+              if v.range then
+                local buf = vim.uri_to_bufnr(v.uri)
+                local line = v.range.start.line
+                local start_char = v.range.start.character
+                local end_char = v.range["end"].character
+                if buf == bufnr then
+                  print(line, start_char, end_char)
+                  vim.api.nvim_buf_add_highlight(bufnr, ns, "LspReferenceWrite", line, start_char, end_char)
+                end
+              end
+            end
+            vim.cmd.redraw()
+            local new_name = vim.fn.input({ prompt = fmt("%s (%d) -> ", params.old_symbol, #result) })
+            vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+            if #new_name == 0 then return end
+            vim.lsp.buf.rename(new_name)
+          end, bufnr)
+        end, "[r]ename")
 
         augroup("LspDiagnostics", {
           {
@@ -165,10 +265,10 @@ return {
         local orig_signs_handler = vim.diagnostic.handlers.signs
         -- Override the built-in signs handler
         vim.diagnostic.handlers.signs = {
-          show = function(_, bufnr, _, opts)
+          show = function(_, bn, _, opts)
             -- Get all diagnostics from the whole buffer rather than just the
             -- diagnostics passed to the handler
-            local diagnostics = vim.diagnostic.get(bufnr)
+            local diagnostics = vim.diagnostic.get(bn)
             -- Find the "worst" diagnostic per line
             local max_severity_per_line = {}
             for _, d in pairs(diagnostics) do
@@ -178,16 +278,16 @@ return {
             -- Pass the filtered diagnostics (with our custom namespace) to
             -- the original handler
             local filtered_diagnostics = vim.tbl_values(max_severity_per_line)
-            orig_signs_handler.show(ns, bufnr, filtered_diagnostics, opts)
+            orig_signs_handler.show(ns, bn, filtered_diagnostics, opts)
           end,
-          hide = function(_, bufnr) orig_signs_handler.hide(ns, bufnr) end,
+          hide = function(_, bn) orig_signs_handler.hide(ns, bn) end,
         }
       end
 
       augroup("LspAttach", {
         {
           event = { "LspAttach" },
-          desc = "",
+          desc = "Attach various functionality to an LSP-connected buffer/client",
           command = function(evt)
             local client = vim.lsp.get_client_by_id(evt.data.client_id)
             if client ~= nil then on_attach(evt.buf, client) end
@@ -382,7 +482,7 @@ return {
           init_options = {
             experimental = {
               completions = {
-                enable = false, -- control if completions are enabled. defaults to false
+                enable = true, -- control if completions are enabled. defaults to false
               },
             },
           },
@@ -394,10 +494,11 @@ return {
             dialyzerEnabled = false,
             enableTestLenses = false,
           }),
-          on_attach = function(client, bufnr)
-            vim.keymap.set("n", "<space>fp", ":ElixirFromPipe<cr>", { buffer = true, noremap = true })
-            vim.keymap.set("n", "<space>tp", ":ElixirToPipe<cr>", { buffer = true, noremap = true })
-            vim.keymap.set("v", "<space>em", ":ElixirExpandMacro<cr>", { buffer = true, noremap = true })
+          on_attach = function(_client, bufnr)
+            local map = vim.keymap.set
+            map("n", "<space>fp", ":ElixirFromPipe<cr>", { buffer = bufnr, noremap = true })
+            map("n", "<space>tp", ":ElixirToPipe<cr>", { buffer = bufnr, noremap = true })
+            map("v", "<space>em", ":ElixirExpandMacro<cr>", { buffer = bufnr, noremap = true })
           end,
         },
       })

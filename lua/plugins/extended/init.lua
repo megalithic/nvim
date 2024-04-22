@@ -16,7 +16,34 @@ return {
     },
 
     "tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
-    { "brenoprata10/nvim-highlight-colors", opts = { enable_tailwind = true } },
+    -- { "brenoprata10/nvim-highlight-colors", opts = { enable_tailwind = true } },
+    {
+      "NvChad/nvim-colorizer.lua",
+      event = { "BufReadPre" },
+      config = function()
+        require("colorizer").setup({
+          filetypes = { "*", "!lazy", "!gitcommit", "!NeogitCommitMessage", "!oil" },
+          buftype = { "*", "!prompt", "!nofile", "!oil" },
+          user_default_options = {
+            RGB = false, -- #RGB hex codes
+            RRGGBB = true, -- #RRGGBB hex codes
+            names = false, -- "Name" codes like Blue or blue
+            RRGGBBAA = true, -- #RRGGBBAA hex codes
+            AARRGGBB = true, -- 0xAARRGGBB hex codes
+            rgb_fn = true, -- CSS rgb() and rgba() functions
+            hsl_fn = true, -- CSS hsl() and hsla() functions
+            -- css = true, -- Enable all CSS features: rgb_fn, hsl_fn, names, RGB, RRGGBB
+            css_fn = true, -- Enable all CSS *functions*: rgb_fn, hsl_fn
+            sass = { enable = false, parsers = { "css" } }, -- Enable sass colors
+            -- Available modes for `mode`: foreground, background,  virtualtext
+            mode = "background", -- Set the display mode.
+            virtualtext = "■",
+          },
+          -- all the sub-options of filetypes apply to buftypes
+          buftypes = {},
+        })
+      end,
+    },
 
     -- "gc" to comment visual regions/lines
     { "numToStr/Comment.nvim", opts = {} },

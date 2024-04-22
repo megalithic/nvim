@@ -445,6 +445,7 @@ return {
           vimgrep_arguments = grep_files_cmd,
         },
         file_ignore_patterns = {
+          ".DS_Store",
           "%.DS_Store",
           "%.csv",
           "%.jpg",
@@ -466,6 +467,7 @@ return {
         },
         pickers = {
           lsp_definitions = ivy({}),
+          buffers = dropdown({}),
           highlights = ivy({}),
           find_files = ivy({
             path_display = filename_first,
@@ -492,6 +494,7 @@ return {
               },
             },
           }),
+          grep_string = ivy({}),
           live_grep = ivy({
             mappings = {
               i = {
@@ -633,15 +636,21 @@ return {
       -- telescope.load_extension("nucleo")
       -- telescope.load_extension("zf-native")
 
-      -- See `:help telescope.builtin`
       local builtin = require("telescope.builtin")
-      map("n", "<leader>fh", ts.help_tags, { desc = "[S]earch [H]elp" })
-      map("n", "<leader>fk", ts.keymaps, { desc = "[S]earch [K]eymaps" })
-      map("n", "<leader>ff", function() ts.smart_open(ivy({})) end, { desc = "[S]earch [F]iles" })
-      map("n", "<leader>fs", ts.builtin, { desc = "[S]earch [S]elect Telescope" })
-      map("n", "<leader>fw", ts.grep_string, { desc = "[S]earch current [W]ord" })
-      map("n", "<leader>a", ts.live_grep, { desc = "[S]earch by [G]rep" })
+      map("n", "<leader>ff", function() ts.smart_open(ivy({})) end, { desc = "[f]ind [f]iles" })
+      map("n", "<leader>fh", ts.help_tags, { desc = "[f]ind [h]elp" })
+      map("n", "<leader>fk", ts.keymaps, { desc = "[f]ind [k]eymaps" })
+      -- map("n", "<leader>fs", ts.builtin, { desc = "[f]ind [f]elect Telescope" })
+      map("n", "<leader>a", ts.live_grep, { desc = "grep (live)" })
+      map("n", "<leader>A", ts.grep_string, { desc = "grep (under cursor)" })
+      -- map("n", "<leader>A", function() live_grep({ default_text = vim.fn.expand("<cword>") }) end, { desc = "grep (under cursor)" })
+      map({ "v", "x" }, "<leader>A", function()
+        local pattern = require("mega.utils").get_visual_selection()
+        grep({ default_text = pattern })
+      end, { desc = "grep (selection)" })
+
       map("n", "<leader>fd", ts.diagnostics, { desc = "[S]earch [D]iagnostics" })
+      map("n", "<leader>fc", function() ts.find_files({ cwd = vim.fn.stdpath("config") }) end, { desc = "[f]ind in [c]onfig" })
       map("n", "<leader>fr", ts.resume, { desc = "[S]earch [R]esume" })
       map("n", "<leader>f.", ts.oldfiles, { desc = "[S]earch Recent Files (\".\" for repeat)" })
       map("n", "<leader><leader>", ts.buffers, { desc = "[ ] Find existing buffers" })
@@ -655,22 +664,7 @@ return {
         }))
       end, { desc = "[/] Fuzzily search in current buffer" })
 
-      -- It's also possible to pass additional configuration options.
-      --  See `:help telescope.builtin.live_grep()` for information about particular keys
-      map(
-        "n",
-        "<leader>s/",
-        function()
-          builtin.live_grep({
-            grep_open_files = true,
-            prompt_title = "Live Grep in Open Files",
-          })
-        end,
-        { desc = "[S]earch [/] in Open Files" }
-      )
-
       -- Shortcut for searching your Neovim configuration files
-      map("n", "<leader>sn", function() builtin.find_files({ cwd = vim.fn.stdpath("config") }) end, { desc = "[S]earch [N]eovim files" })
     end,
   },
 }
