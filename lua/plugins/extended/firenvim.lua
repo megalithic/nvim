@@ -253,7 +253,7 @@ return {
       end
     end
 
-    require("autocmds").augroup("Firenvim", {
+    require("mega.autocmds").augroup("Firenvim", {
       {
         event = { "UIEnter" },
         once = true,

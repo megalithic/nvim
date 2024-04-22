@@ -4,26 +4,26 @@ ftplugin.extend_all({
   elixir = {
     abbr = {
       ep = "|>",
-      epry = "require IEx; IEx.pry",
-      ei = "IO.inspect()<ESC>i",
-      eputs = "IO.puts()<ESC>i",
-      edb = "dbg()<ESC>i",
+      epry = [[require IEx; IEx.pry]],
+      ei = [[IO.inspect()<ESC>hi]],
+      eputs = [[IO.puts()<ESC>hi]],
+      edb = [[dbg()<ESC>hi]],
       ["~H"] = [[~H""""""<ESC>2hi<CR><ESC>O<BS> ]],
       ["~h"] = [[~H""""""<ESC>2hi<CR><ESC>O<BS> ]],
       [":skip:"] = "@tag :skip",
       tskip = "@tag :skip",
     },
-    opt = {
-      iskeyword = vim.opt.iskeyword + { "!", "?", "-" },
-      indentkeys = vim.opt.indentkeys + { "end" },
-    },
+    -- opt = {
+    --   iskeyword = vim.opt.iskeyword + { "!", "?", "-" },
+    --   indentkeys = vim.opt.indentkeys + { "end" },
+    -- },
     callback = function()
       -- REF:
       -- running tests in iex:
       -- https://curiosum.com/til/run-tests-in-elixir-iex-shell?utm_medium=email&utm_source=elixir-radar
-      -- vim.cmd([[setlocal iskeyword+=!,?,-]])
-      -- vim.cmd([[setlocal indentkeys-=0{]])
-      -- vim.cmd([[setlocal indentkeys+=0=end]])
+      vim.cmd([[setlocal iskeyword+=!,?,-]])
+      vim.cmd([[setlocal indentkeys-=0{]])
+      vim.cmd([[setlocal indentkeys+=0=end]])
 
       -- mega.command("CopyModuleAlias", function()
       --   vim.api.nvim_feedkeys(

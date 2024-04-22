@@ -81,9 +81,10 @@ return {
   {
     "echasnovski/mini.hipatterns",
     opts = {
-      -- Highlight standalone "FIXME", "HACK", "TODO", "NOTE", "WARN", "REF"
+      -- Highlight standalone "FIXME", "ERROR", "HACK", "TODO", "NOTE", "WARN", "REF"
       highlighters = {
         fixme = { pattern = "%f[%w]()FIXME()%f[%W]", group = "MiniHipatternsFixme" },
+        error = { pattern = "%f[%w]()ERROR()%f[%W]", group = "MiniHipatternsError" },
         hack = { pattern = "%f[%w]()HACK()%f[%W]", group = "MiniHipatternsHack" },
         warn = { pattern = "%f[%w]()WARN()%f[%W]", group = "MiniHipatternsWarn" },
         todo = { pattern = "%f[%w]()TODO()%f[%W]", group = "MiniHipatternsTodo" },

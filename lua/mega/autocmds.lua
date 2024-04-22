@@ -25,7 +25,7 @@ function M.augroup(name, commands)
   ---@param name string
   ---@param cmd Autocommand
   local function validate_autocmd(name, cmd)
-    local keys = { "event", "buffer", "pattern", "desc", "callback", "command", "group", "once", "nested" }
+    local keys = { "event", "buffer", "pattern", "desc", "callback", "command", "group", "once", "nested", "enabled" }
     local incorrect = U.fold(function(accum, _, key)
       if not vim.tbl_contains(keys, key) then table.insert(accum, key) end
       return accum
@@ -67,6 +67,56 @@ end
 function M.apply()
   M.augroup("Startup", {
     {
+      event = { "VimEnter" },
+      pattern = { "*" },
+      once = true,
+      desc = "Crazy behaviours for opening vim with arguments (or not)",
+      command = function(args)
+        -- TODO: handle situations where 2 file names given and the second is of the shape of a line number, e.g. `:200`;
+        -- maybe use this? https://github.com/stevearc/dotfiles/commit/db4849d91328bb6f39481cf2e009866911c31757
+        local arg = vim.api.nvim_eval("argv(0)")
+        if
+          not vim.g.started_by_firenvim
+          and (not vim.env.TMUX_POPUP and vim.env.TMUX_POPUP ~= 1)
+          and not vim.tbl_contains({ "NeogitStatus" }, vim.bo[args.buf].filetype)
+        then
+          if vim.fn.argc() > 1 then
+            local linenr = string.match(vim.fn.argv(1), "^:(%d+)$")
+            if string.find(vim.fn.argv(1), "^:%d*") ~= nil then
+              vim.cmd.edit({ args = { vim.fn.argv(0) } })
+              pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(linenr), 0 })
+              vim.api.nvim_buf_delete(args.buf + 1, { force = true })
+            else
+              vim.schedule(function()
+                mega.resize_windows(args.buf)
+                require("virt-column").update()
+              end)
+            end
+          elseif vim.fn.argc() == 1 then
+            if vim.fn.isdirectory(arg) == 1 then
+              require("oil").open(arg)
+            else
+              -- handle editing an argument with `:300`(line number) at the end
+              local bufname = vim.api.nvim_buf_get_name(args.buf)
+              local root, line = bufname:match("^(.*):(%d+)$")
+              if vim.fn.filereadable(bufname) == 0 and root and line and vim.fn.filereadable(root) == 1 then
+                vim.schedule(function()
+                  vim.cmd.edit({ args = { root } })
+                  pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line), 0 })
+                  vim.api.nvim_buf_delete(args.buf, { force = true })
+                end)
+              end
+            end
+          elseif vim.fn.isdirectory(arg) == 1 then
+            require("oil").open(arg)
+          elseif mega.picker ~= nil and mega.picker["startup"] ~= nil then
+            mega.picker.startup(args.buf)
+          end
+        end
+      end,
+    },
+    {
+      enabled = false,
       event = { "VimEnter" },
       pattern = { "*" },
       once = true,
@@ -113,13 +163,13 @@ function M.apply()
             else
               -- handle editing an argument with `:300`(line number) at the end (e.g. this is when we have path/to/file.txt:20)
               local bufname = vim.api.nvim_buf_get_name(args.buf)
-              local root, line = bufname:match("^(.*):(%d+)$")
-              if vim.fn.filereadable(bufname) == 0 and root and line and vim.fn.filereadable(root) == 1 then
+              local root, linenr = bufname:match("^(.*):(%d+)$")
+              if vim.fn.filereadable(bufname) == 0 and root and linenr and vim.fn.filereadable(root) == 1 then
                 vim.schedule(function()
                   -- open the file
                   vim.cmd.edit({ args = { root } })
                   -- jump to the line number
-                  pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line), 0 })
+                  pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(linenr), 0 })
                   -- delete the empty buffer that got opened, too
                   vim.api.nvim_buf_delete(args.buf, { force = true })
                 end)
@@ -196,65 +246,79 @@ function M.apply()
   M.augroup("EnterLeaveBehaviours", {
     {
       desc = "Enable things on *Enter",
-      event = { "BufEnter" },
+      event = { "BufEnter", "WinEnter" },
       command = function(evt)
         vim.defer_fn(function()
           -- enable ibl for active buffer
           local ibl_ok, ibl = pcall(require, "ibl")
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
         end, 1)
+        vim.wo.cursorline = true
+        vim.cmd("ColorizerAttachToBuffer")
       end,
     },
     {
       desc = "Disable things on *Leave",
-      event = { "BufLeave" },
+      event = { "BufLeave", "WinLeave" },
       command = function(evt)
         vim.defer_fn(function()
           -- disable ibl for inactive buffer
           local ibl_ok, ibl = pcall(require, "ibl")
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
         end, 1)
+        vim.wo.cursorline = false
+        vim.cmd("ColorizerDetachFromBuffer")
       end,
     },
   })
 
   M.augroup("InsertBehaviours", {
     {
+      enabled = not vim.g.started_by_firenvim,
       desc = "OnInsertEnter",
       event = { "InsertEnter" },
-      command = function(evt) vim.diagnostic.disable() end,
+      command = function(evt)
+        vim.diagnostic.disable()
+        vim.wo.number = true
+        vim.wo.relativenumber = false
+      end,
     },
     {
+      enabled = not vim.g.started_by_firenvim,
       desc = "OnInsertLeave",
-      event = { "InsertEnter" },
-      command = function(evt) vim.diagnostic.enable() end,
+      event = { "InsertLeave" },
+      command = function(evt)
+        vim.diagnostic.enable()
+        vim.wo.number = true
+        vim.wo.relativenumber = true
+      end,
     },
   })
 
-  M.augroup("CursorMovementBehaviours", {
-    {
-      desc = "Disable things on CursorMoved",
-      event = { "CursorMoved" },
-      command = function(evt)
-        vim.defer_fn(function()
-          local ibl_ok, ibl = pcall(require, "ibl")
-          if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
-          -- vim.b.miniindentscope_disable = true
-        end, 1)
-      end,
-    },
-    {
-      desc = "Enable things on CursorHold",
-      event = { "CursorHold" },
-      command = function(evt)
-        vim.defer_fn(function()
-          local ibl_ok, ibl = pcall(require, "ibl")
-          if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
-          -- vim.b.miniindentscope_disable = false
-        end, 2)
-      end,
-    },
-  })
+  -- M.augroup("CursorMovementBehaviours", {
+  --   {
+  --     desc = "Disable things on CursorMoved",
+  --     event = { "CursorMoved" },
+  --     command = function(evt)
+  --       vim.defer_fn(function()
+  --         local ibl_ok, ibl = pcall(require, "ibl")
+  --         if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
+  --         -- vim.b.miniindentscope_disable = true
+  --       end, 1)
+  --     end,
+  --   },
+  --   {
+  --     desc = "Enable things on CursorHold",
+  --     event = { "CursorHold" },
+  --     command = function(evt)
+  --       vim.defer_fn(function()
+  --         local ibl_ok, ibl = pcall(require, "ibl")
+  --         if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
+  --         -- vim.b.miniindentscope_disable = false
+  --       end, 2)
+  --     end,
+  --   },
+  -- })
 
   M.augroup("Utilities", {
     {
