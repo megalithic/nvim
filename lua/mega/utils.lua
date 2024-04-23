@@ -5,6 +5,7 @@ local api = vim.api
 local fmt = vim.format
 local levels = vim.log.levels
 local L = levels
+local SETTINGS = require("mega.settings")
 
 local M = {
   hl = {},
@@ -12,13 +13,13 @@ local M = {
 }
 
 function M.lsp.is_enabled_elixir_ls(ls, enabled_clients)
-  enabled_clients = enabled_clients or vim.g.enabled_elixir_ls
+  enabled_clients = enabled_clients or SETTINGS.enabled_elixir_ls
 
   return vim.tbl_contains(enabled_clients, ls)
 end
 
 function M.lsp.formatting_filter(client, exclusions)
-  exclusions = exclusions or vim.g.formatter_exclusions
+  exclusions = exclusions or SETTINGS.formatter_exclusions
 
   return not vim.tbl_contains(exclusions, client.name)
 end

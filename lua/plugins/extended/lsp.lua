@@ -1,4 +1,5 @@
-local BORDER_STYLE = require("mega.settings").border
+local SETTINGS = require("mega.settings")
+local BORDER_STYLE = SETTINGS.border
 local augroup = require("mega.autocmds").augroup
 local command = vim.api.nvim_create_user_command
 local U = require("mega.utils")
@@ -60,7 +61,7 @@ return {
 
       local function diagnostic_popup(opts)
         local bufnr = opts
-        if type(opts) == "table" then bufnr = opts.buf end
+        if type(opts) == "table" then bufnr = opts.buf or 0 end
 
         local diags = vim.diagnostic.open_float(bufnr, { focus = false, scope = "cursor" })
 
@@ -105,12 +106,35 @@ return {
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
       local function on_attach(bufnr, client)
-        local disabled_lsp_formatting = { "tailwindcss", "html", "tsserver", "ls_emmet", "zk", "sumneko_lua" }
+        local disabled_lsp_formatting = SETTINGS.disabled_lsp_formatters
         for i = 1, #disabled_lsp_formatting do
           if disabled_lsp_formatting[i] == client.name then
             client.server_capabilities.documentFormattingProvider = false
             client.server_capabilities.documentRangeFormattingProvider = false
           end
+        end
+
+        -- vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config) ---@diagnostic disable-line: duplicate-set-field
+        --   result.diagnostics = vim.tbl_map(function(diag)
+        --     if
+        --       (diag.source == "biome" and diag.code == "lint/suspicious/noConsoleLog")
+        --       or (diag.source == "stylelintplus" and diag.code == "declaration-no-important")
+        --     then
+        --       diag.severity = vim.diagnostic.severity.HINT
+        --     end
+        --     return diag
+        --   end, result.diagnostics)
+        --
+        --   vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
+        -- end
+
+        local diagnostic_handler = vim.lsp.handlers["textDocument/publishDiagnostics"]
+        vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
+          local client_name = vim.lsp.get_client_by_id(ctx.client_id).name
+          -- disables diagnostic reporting for specific clients
+          if vim.tbl_contains(SETTINGS.diagnostic_exclusions, client_name) then return end
+
+          diagnostic_handler(err, result, ctx, config)
         end
 
         -- if action opens up qf list, open the first item and close the list
@@ -496,12 +520,14 @@ return {
             scope = "cursor",
             header = { " Diagnostics:", "DiagnosticHeader" },
             suffix = function(diag) return diag_source_as_suffix(diag, "float") end,
-            prefix = function(diag, i, _total)
-              local level = vim_diag.severity[diag.severity]
-              local prefix = fmt("%d. ", i)
-              -- local prefix = fmt("%d. %s ", i, mega.icons.lsp[level:lower()])
-              return prefix, "Diagnostic" .. level:gsub("^%l", string.upper)
+            prefix = function(diag, _index, total)
+              if total == 1 then return "", "" end
+              -- local level = diag.severity[diag.severity]
+              -- local prefix = fmt("%s ", SETTINGS.icons.lsp[level:lower()])
+              -- return prefix, "Diagnostic" .. level:gsub("^%l", string.upper)
+              return "• ", "NonText"
             end,
+            format = diag_msg_format,
           },
           severity_sort = true,
           virtual_text = {

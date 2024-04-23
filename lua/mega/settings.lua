@@ -75,6 +75,7 @@ local M = {
   },
   -- REF: elixir LSPs: elixir-tools(tools-elixirls, tools-nextls, credo), elixirls, nextls, lexical
   enabled_elixir_ls = { "", "", "elixirls", "", "lexical" },
+  disabled_lsp_formatters = { "tailwindcss", "html", "tsserver", "ls_emmet", "zk", "sumneko_lua" },
   formatter_exclusions = { "tools-elixirls", "tools-nextls", "", "nextls", "lexical" },
   diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "", "tsserver" },
   max_diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "lexical" },
@@ -118,9 +119,9 @@ local M = {
   },
   icons = {
     lsp = {
-      error = "", -- alts: 󰬌 
-      warn = "󰔷", -- alts: 󰬞 󰔷  ▲
-      info = "●", -- alts: 󱂈 󰋼  󰬐 󰰃     ● 󰬐
+      error = "", -- alts: 󰬌      
+      warn = "▲", -- alts: 󰬞 󰔷   ▲ 󰔷
+      info = "", -- alts: 󱂈 󰋼  󰬐 󰰃     ● 󰬐
       hint = "", -- alts:  󰬏 󰰀  󰌶 󰰂 󰰂 󰰁 󰫵 󰋢   
       ok = "✓", -- alts: ✓✓
     },
