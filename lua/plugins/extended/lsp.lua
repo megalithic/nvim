@@ -187,7 +187,16 @@ return {
             vim.lsp.buf.rename(new_name)
           end, bufnr)
         end, "[R]e[n]ame")
+
         map("gn", function()
+          local params = vim.lsp.util.make_position_params()
+          client.request("textDocument/references", params, function(_, result)
+            if not result or vim.tbl_isempty(result) then
+              vim.notify("Nothing to rename.")
+              return
+            end
+          end)
+
           -- populate qf list with changes (if multiple files modified)
           local function qf_rename()
             local rename_prompt = ""
