@@ -125,7 +125,20 @@ ftplugin.extend_all({
       list = false,
       textwidth = 80,
     },
-    callback = function() mega.pcall(vim.treesitter.start) end,
+    callback = function() pcall(vim.treesitter.start) end,
+  },
+  prompt = {
+    opt = {
+      signcolumn = "no",
+      number = false,
+      relativenumber = false,
+      list = false,
+    },
+    callback = function(ctx)
+      vim.pprint(ctx)
+      print(vim.bo.buftype)
+      print(vim.bo.filetype)
+    end,
   },
   man = {
     keys = {
@@ -160,13 +173,13 @@ ftplugin.extend_all({
         local oil = require("oil")
         local dir = oil.get_current_dir()
         if vim.api.nvim_win_get_config(0).relative ~= "" then vim.api.nvim_win_close(0, true) end
-        mega.find_files({ cwd = dir, hidden = true })
+        mega.picker.find_files({ cwd = dir, hidden = true })
       end, "find files in dir")
       map("<localleader>a", function()
         local oil = require("oil")
         local dir = oil.get_current_dir()
         if vim.api.nvim_win_get_config(0).relative ~= "" then vim.api.nvim_win_close(0, true) end
-        mega.grep({ cwd = dir })
+        mega.picker.grep({ cwd = dir })
       end, "grep files in dir")
     end,
   },

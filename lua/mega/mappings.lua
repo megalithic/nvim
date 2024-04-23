@@ -11,6 +11,15 @@ local U = require("mega.utils")
 -- or just use <C-\><C-n> to exit terminal mode
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
+-- [[ command mode ]] ---------------------
+map("v", "<leader>S", ":!sort<cr>", { desc = "Sort selection" })
+map("n", "<leader>:", ":!", { desc = "Execute last command" })
+map("n", "<leader>;", ":<Up>", { desc = "Go to last command" })
+--
+-- " Command mode conveniences
+-- noremap <leader>: :!
+-- noremap <leader>; :<Up>
+
 -- [[ ui/vim behaviours ]] -------------------------------------------------------------------------------------------------------
 map("n", "<esc>", function()
   vim.cmd.doautoall("User EscDeluxeStart")
@@ -173,3 +182,37 @@ map("n", "<leader>V", "V`]", { desc = "reselect pasted content" })
 map("n", "gp", "`[v`]", { desc = "reselect pasted content" })
 map("n", "gV", "ggVG", { desc = "select whole buffer" })
 map("n", "<leader>v", "ggVG", { desc = "select whole buffer" })
+
+-- [[ line editing ]] ----------------------------------------------------------------------------------------------------
+-- TLDR: Conditionally modify character at end of line
+-- Description:
+-- This function takes a delimiter character and:
+--   * removes that character from the end of the line if the character at the end
+--     of the line is that character
+--   * removes the character at the end of the line if that character is a
+--     delimiter that is not the input character and appends that character to
+--     the end of the line
+--   * adds that character to the end of the line if the line does not end with
+--     a delimiter
+-- Delimiters:
+-- - ","
+-- - ";"
+---@param character string
+---@return function
+local function modify_line_end_delimiter(character)
+  local delimiters = { ",", ";" }
+  return function()
+    local line = vim.api.nvim_get_current_line()
+    local last_char = line:sub(-1)
+    if last_char == character then
+      vim.api.nvim_set_current_line(line:sub(1, #line - 1))
+    elseif vim.tbl_contains(delimiters, last_char) then
+      vim.api.nvim_set_current_line(line:sub(1, #line - 1) .. character)
+    else
+      vim.api.nvim_set_current_line(line .. character)
+    end
+  end
+end
+
+map("n", "<localleader>,", modify_line_end_delimiter(","), { desc = "add comma `,` to end of current line" })
+map("n", "<localleader>;", modify_line_end_delimiter(";"), { desc = "add semicolon `;` to end of current line" })

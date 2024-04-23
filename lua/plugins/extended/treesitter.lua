@@ -107,8 +107,7 @@ return {
           -- init_selection = "vv",
           node_incremental = "v",
           node_decremental = "V",
-          scope_incremental = false,
-          -- scope_incremental = "vv", -- increment to the upper scope (as defined in locals.scm)
+          scope_incremental = "vv", -- increment to the upper scope (as defined in locals.scm)
         },
       },
     },
@@ -128,10 +127,6 @@ return {
       for ft, parser in pairs(ft_to_parser_aliases) do
         vim.treesitter.language.register(parser, ft)
       end
-
-      require("nvim-treesitter.install").prefer_git = true
-      ---@diagnostic disable-next-line: missing-fields
-      require("nvim-treesitter.configs").setup(opts)
 
       local non_filetype_match_injection_language_aliases = {
         ex = "elixir",
@@ -201,20 +196,23 @@ return {
       end)
 
       vim.treesitter.query.add_directive("offset-first-n!", offset_first_n, true)
-
       vim.treesitter.query.add_directive("ft-conceal!", ft_conceal, true)
+
+      require("nvim-treesitter.install").prefer_git = true
+      vim.lg(opts)
+      require("nvim-treesitter.configs").setup(opts)
     end,
   },
 
-  { "nvim-treesitter/nvim-treesitter-textobjects", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
-  { "RRethy/nvim-treesitter-textsubjects", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
-  { "nvim-treesitter/nvim-tree-docs", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "nvim-treesitter/nvim-treesitter-textobjects", cond = true, dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "RRethy/nvim-treesitter-textsubjects", cond = true, dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "nvim-treesitter/nvim-tree-docs", cond = true, dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "RRethy/nvim-treesitter-endwise", dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "megalithic/nvim-ts-autotag", dependencies = { "nvim-treesitter/nvim-treesitter" } },
   {
     "andymass/vim-matchup",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
-    cond = false,
+    cond = true,
     lazy = false,
     config = function()
       vim.g.matchup_matchparen_nomode = "i"
@@ -236,12 +234,12 @@ return {
       vim.g.matchup_text_obj_enabled = 1
     end,
   },
-  { "David-Kunz/treesitter-unit", cond = false, dependencies = { "nvim-treesitter/nvim-treesitter" } },
+  { "David-Kunz/treesitter-unit", cond = true, dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "yorickpeterse/nvim-tree-pairs", dependencies = { "nvim-treesitter/nvim-treesitter" }, opts = {} },
   {
     "HiPhish/rainbow-delimiters.nvim",
     -- FIXME: MIGHT be causing segfaults
-    cond = false,
+    cond = true,
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     event = "VimEnter",
     config = function()

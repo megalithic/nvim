@@ -24,6 +24,7 @@ local ft_ignores = {
   "SidebarNvim",
   "fidget",
   "Trouble",
+  "trouble",
   "qf",
   "neo-tree",
   "lazy",
@@ -43,6 +44,8 @@ local bt_ignores = {
   "current",
   "Vista",
   "Trouble",
+  "trouble",
+  "qf",
   "LuaTree",
   "NvimTree",
   "terminal",
@@ -78,7 +81,7 @@ local function is_ignored(bufnr)
   return should_ignore
 end
 
-local function resize_windows(bufnr)
+function mega.resize_windows(bufnr)
   -- necessary to avoid split widths from going tooo small
   vim.o.winminwidth = 20
 
@@ -100,10 +103,10 @@ end
 require("mega.autocmds").augroup("WindowsGoldenResizer", {
   {
     event = { "WinEnter", "VimResized" },
-    command = function(args) resize_windows(args.buf) end,
+    command = function(args) mega.resize_windows(args.buf) end,
   },
   {
     event = { "WinEnter", "VimResized" },
-    command = function(args) resize_windows(args.buf) end,
+    command = function(args) mega.resize_windows(args.buf) end,
   },
 })

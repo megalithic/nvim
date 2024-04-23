@@ -243,6 +243,30 @@ function M.apply()
     },
   })
 
+  M.augroup("CmdlineBehaviours", {
+    {
+      -- make `:substitute` also notify how many changes were made
+      -- works, as `CmdlineLeave` is triggered before the execution of the command
+      event = "CmdlineLeave",
+      command = function(ctx)
+        if not ctx.match == ":" then return end
+        local cmdline = vim.fn.getcmdline()
+        local isSubstitution = cmdline:find("s ?/.+/.-/%a*$")
+        if isSubstitution then vim.cmd(cmdline .. "ne") end
+      end,
+    },
+    {
+      event = "CmdlineLeave",
+      command = function(ctx)
+        if not ctx.match == ":" then return end
+        vim.defer_fn(function()
+          local lineJump = vim.fn.histget(":", -1):match("^%d+$")
+          if lineJump then vim.fn.histdel(":", -1) end
+        end, 100)
+      end,
+    },
+  })
+
   M.augroup("EnterLeaveBehaviours", {
     {
       desc = "Enable things on *Enter",
@@ -254,7 +278,7 @@ function M.apply()
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
         end, 1)
         vim.wo.cursorline = true
-        vim.cmd("ColorizerAttachToBuffer")
+        -- if not vim.g.started_by_firenvim then vim.cmd("ColorizerAttachToBuffer") end
       end,
     },
     {
@@ -267,7 +291,7 @@ function M.apply()
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
         end, 1)
         vim.wo.cursorline = false
-        vim.cmd("ColorizerDetachFromBuffer")
+        -- if not vim.g.started_by_firenvim then vim.cmd("ColorizerDetachFromBuffer") end
       end,
     },
   })

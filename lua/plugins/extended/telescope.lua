@@ -587,6 +587,7 @@ return {
                 ["<c-v>"] = stopinsert(function(pb) multi(pb, "vnew") end),
                 ["<c-s>"] = stopinsert(function(pb) multi(pb, "new") end),
                 ["<c-o>"] = stopinsert(function(pb) multi(pb, "edit") end),
+                ["<tab>"] = actions.toggle_selection,
               },
             },
           },

@@ -1,3 +1,6 @@
+local SETTINGS = require("mega.settings")
+local U = require("mega.utils")
+
 local prettier = { "dprint", "prettierd", "prettier" }
 local shfmt = { "shfmt" } -- shellharden
 local timeout_ms = 1500
@@ -78,14 +81,14 @@ return {
       -- if async_format or vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then return end
       if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then return end
       -- dd("format on save")
-      return { timeout_ms = timeout_ms, lsp_fallback = lsp_fallback, filter = mega.lsp.formatting_filter }
+      return { timeout_ms = timeout_ms, lsp_fallback = lsp_fallback, filter = U.lsp.formatting_filter }
     end,
     -- format_after_save = function(bufnr)
     --   -- local async_format = vim.g.async_format_filetypes[vim.bo[bufnr].filetype]
     --   -- if not async_format or vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then return end
     --   if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then return end
     --   -- dd("format after save")
-    --   return { timeout_ms = timeout_ms, lsp_fallback = lsp_fallback, filter = mega.lsp.formatting_filter }
+    --   return { timeout_ms = timeout_ms, lsp_fallback = lsp_fallback, filter = U.lsp.formatting_filter }
     -- end,
     user_async_format_filetypes = {
       python = true,
@@ -110,7 +113,7 @@ return {
         -- require("conform").format({
         --   timeout_ms = timeout_ms,
         --   lsp_fallback = lsp_fallback,
-        --   filter = mega.lsp.formatting_filter,
+        --   filter = U.lsp.formatting_filter,
         --   bufnr = 0,
         -- })
       end

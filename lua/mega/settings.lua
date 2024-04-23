@@ -24,12 +24,25 @@ local connected_telescope_border_chars = {
   shadow = { "", "", "", "", "", "", "", "" },
 }
 
+local current_border = function(opts)
+  opts = opts or { hl = "FloatBorder", style = BORDER_STYLE }
+  local hl = opts.hl or "FloatBorder"
+  local style = opts.style or BORDER_STYLE
+  local border = {}
+  for _, char in ipairs(border_chars[style]) do
+    table.insert(border, { char, hl })
+  end
+
+  return border
+end
+
 local M = {
   -- NOTE: char options (https://unicodeplus.com/): ┊│┆ ┊  ▎││ ▏▏│¦┆┊
   indent_scope_char = "│",
   indent_char = "┊",
   virt_column_char = "│",
-  border = BORDER_STYLE,
+  border_style = BORDER_STYLE,
+  border = current_border(),
   border_chars = border_chars[BORDER_STYLE],
   telescope_border_chars = telescope_border_chars[BORDER_STYLE],
   colorscheme = "megaforest", -- alt: `vim` for default
@@ -88,9 +101,9 @@ local M = {
   icons = {
     lsp = {
       error = "", -- alts: 󰬌 
-      warn = "󰔷", -- alts: 󰬞 󰔷 
-      info = "󰬐", -- alts: 󱂈 󰋼  󰬐 󰰃    
-      hint = "", -- alts:  󰬏 󰰀  󰌶 󰰂 󰰂 󰰁 󰫵 󰋢 
+      warn = "󰔷", -- alts: 󰬞 󰔷  ▲
+      info = "●", -- alts: 󱂈 󰋼  󰬐 󰰃     ● 󰬐
+      hint = "", -- alts:  󰬏 󰰀  󰌶 󰰂 󰰂 󰰁 󰫵 󰋢   
       ok = "✓", -- alts: ✓✓
     },
     test = {
@@ -320,7 +333,7 @@ M.apply = function()
       number = true,
       -- You can also add relative line numbers, to help with jumping.
       --  Experiment for yourself to see if you like it!
-      -- relativenumber = true
+      relativenumber = true,
 
       -- Enable mouse mode, can be useful for resizing splits for example!
       mouse = "a",
@@ -360,7 +373,34 @@ M.apply = function()
       --  See `:help 'list'`
       --  and `:help 'listchars'`
       list = true,
-      listchars = { tab = "» ", trail = "·", nbsp = "␣" },
+      listchars = {
+        eol = nil,
+        tab = "» ", -- alts: »│ │
+        nbsp = "␣",
+        extends = "›", -- alts: … »
+        precedes = "‹", -- alts: … «
+        trail = "·", -- alts: • BULLET (U+2022, UTF-8: E2 80 A2)
+      },
+
+      fillchars = {
+        horiz = "━",
+        vert = "▕", -- alternatives │┃
+        -- horizdown = '┳',
+        -- horizup   = '┻',
+        -- vertleft  = '┫',
+        -- vertright = '┣',
+        -- verthoriz = '╋',
+        fold = " ",
+        eob = " ", -- suppress ~ at EndOfBuffer
+        diff = "╱", -- alts: = ⣿ ░ ─
+        msgsep = " ", -- alts: ‾ ─
+        foldopen = M.icons.misc.fold_open, -- alts: ▾
+        -- foldsep = "│",
+        foldsep = " ",
+        foldclose = M.icons.misc.fold_close, -- alts: ▸
+        stl = " ", -- alts: ─ ⣿ ░ ▐ ▒▓
+        stlnc = " ", -- alts: ─
+      },
 
       -- Preview substitutions live, as you type!
       inccommand = "split",

@@ -8,7 +8,20 @@ local L = levels
 
 local M = {
   hl = {},
+  lsp = {},
 }
+
+function M.lsp.is_enabled_elixir_ls(ls, enabled_clients)
+  enabled_clients = enabled_clients or vim.g.enabled_elixir_ls
+
+  return vim.tbl_contains(enabled_clients, ls)
+end
+
+function M.lsp.formatting_filter(client, exclusions)
+  exclusions = exclusions or vim.g.formatter_exclusions
+
+  return not vim.tbl_contains(exclusions, client.name)
+end
 
 --- Call the given function and use `vim.notify` to notify of any errors
 --- this function is a wrapper around `xpcall` which allows having a single
@@ -421,6 +434,49 @@ function M.preview_file(filename)
   end
 
   vim.api.nvim_command(cmd)
+end
+
+function M.get_visible_qflists()
+  -- get winnrs for qflists visible in current tab
+  return vim.iter(vim.api.nvim_tabpage_list_wins(0)):filter(function(winnr) return vim.fn.getwininfo(winnr)[1].quickfix == 1 end)
+end
+
+function M.qf_populate(lines, opts)
+  -- set qflist and open
+  if not lines or #lines == 0 then return end
+
+  opts = vim.tbl_deep_extend("force", {
+    simple_list = false,
+    mode = "r",
+    title = nil,
+    scroll_to_end = false,
+  }, opts or {})
+
+  -- convenience implementation, set qf directly from values
+  if opts.simple_list then
+    lines = vim.iter(lines):map(function(item)
+      -- set default file loc to 1:1
+      return { filename = item, lnum = 1, col = 1, text = item }
+    end)
+  end
+
+  -- close any prior lists visible in current tab
+  if not vim.tbl_isempty(M.get_visible_qflists()) then vim.cmd([[ cclose ]]) end
+
+  vim.fn.setqflist(lines, opts.mode)
+
+  if opts.open_in_trouble ~= nil and opts.open_in_trouble then
+    vim.cmd("Trouble qflist open")
+  else
+    local commands = table.concat({
+      "horizontal copen",
+      (opts.scroll_to_end and "normal! G") or "",
+      -- (opts.title and require("statusline").set_statusline_cmd(opts.title)) or "",
+      "wincmd p",
+    }, "\n")
+
+    vim.cmd(commands)
+  end
 end
 
 --[[

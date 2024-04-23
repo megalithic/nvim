@@ -1,5 +1,7 @@
 local BORDER_STYLE = require("mega.settings").border
 local augroup = require("mega.autocmds").augroup
+local command = vim.api.nvim_create_user_command
+local U = require("mega.utils")
 local fmt = string.format
 
 return {
@@ -103,6 +105,14 @@ return {
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
       local function on_attach(bufnr, client)
+        local disabled_lsp_formatting = { "tailwindcss", "html", "tsserver", "ls_emmet", "zk", "sumneko_lua" }
+        for i = 1, #disabled_lsp_formatting do
+          if disabled_lsp_formatting[i] == client.name then
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+          end
+        end
+
         -- if action opens up qf list, open the first item and close the list
         local function choose_list_first(options)
           vim.fn.setqflist({}, " ", options)
@@ -130,17 +140,14 @@ return {
           vim.lsp.buf.definition({ on_list = choose_list_first })
         end, "[g]oto [d]efinition (split)")
         map("gr", require("telescope.builtin").lsp_references, "[g]oto [r]eferences")
-        map("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
-        map("<leader>D", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition")
-        map("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols")
-        map("<leader>ws", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[W]orkspace [S]ymbols")
-        map("<leader>rn", vim.lsp.buf.rename, "[R]e[n]ame")
-        map("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
-        map("K", vim.lsp.buf.hover, "Hover Documentation")
-        map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration (e.g. to a header file in C)")
-
-        map("gn", function()
-          bufnr = vim.api.nvim_get_current_buf()
+        map("gI", require("telescope.builtin").lsp_implementations, "[g]oto [i]mplementation")
+        map("<leader>D", require("telescope.builtin").lsp_type_definitions, "type [d]efinition")
+        map("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[d]ocument [s]ymbols")
+        map("<leader>ws", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[w]orkspace [s]ymbols")
+        map("<leader>ca", vim.lsp.buf.code_action, "[c]ode [a]ction")
+        map("K", vim.lsp.buf.hover, "hover documentation")
+        map("gD", vim.lsp.buf.declaration, "[g]oto [d]eclaration (e.g. to a header file in C)")
+        map("<leader>rn", function()
           local params = vim.lsp.util.make_position_params()
           local current_symbol = vim.fn.expand("<cword>")
           params.old_symbol = current_symbol
@@ -168,7 +175,7 @@ return {
                 local start_char = v.range.start.character
                 local end_char = v.range["end"].character
                 if buf == bufnr then
-                  print(line, start_char, end_char)
+                  -- print(line, start_char, end_char)
                   vim.api.nvim_buf_add_highlight(bufnr, ns, "LspReferenceWrite", line, start_char, end_char)
                 end
               end
@@ -179,7 +186,206 @@ return {
             if #new_name == 0 then return end
             vim.lsp.buf.rename(new_name)
           end, bufnr)
+        end, "[R]e[n]ame")
+        map("gn", function()
+          -- populate qf list with changes (if multiple files modified)
+          local function qf_rename()
+            local rename_prompt = ""
+            local default_rename_prompt = " -> "
+            local current_name = ""
+
+            local position_params = vim.lsp.util.make_position_params()
+            position_params.oldName = vim.fn.expand("<cword>")
+            position_params.context = { includeDeclaration = true }
+
+            local function cleanup_rename_callback(winnr)
+              vim.api.nvim_win_close(winnr or 0, true)
+              vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "i", true)
+
+              current_name = ""
+              rename_prompt = default_rename_prompt
+            end
+
+            local rename_callback = function()
+              local input = vim.trim(vim.fn.getline("."):sub(#rename_prompt, -1))
+
+              if input == nil then
+                vim.notify("aborted", L.WARN, { title = "[lsp] rename" })
+                return
+              elseif input == position_params.oldName then
+                vim.notify("input text matches current text; try again.", L.WARN, { title = "[lsp] rename" })
+                return
+              end
+
+              cleanup_rename_callback()
+
+              position_params.newName = input
+
+              vim.lsp.buf_request(0, "textDocument/rename", position_params, function(err, result, ctx, config)
+                -- result not provided, error at lsp end
+                -- no changes made
+                if not result or (not result.documentChanges and not result.changes) then
+                  vim.notify(
+                    string.format("could not perform rename: %s -> %s", position_params.oldName, position_params.newName),
+                    L.ERROR,
+                    { title = "[LSP] rename", timeout = 500 }
+                  )
+
+                  return
+                end
+
+                -- apply changes
+                vim.lsp.handlers["textDocument/rename"](err, result, ctx, config)
+
+                local notification, entries = {}, {}
+                local num_files, num_updates = 0, 0
+
+                -- collect changes
+                if result.documentChanges then
+                  for _, document in pairs(result.documentChanges) do
+                    num_files = num_files + 1
+                    local uri = document.textDocument.uri
+                    bufnr = vim.uri_to_bufnr(uri)
+
+                    for _, edit in ipairs(document.edits) do
+                      local start_line = edit.range.start.line + 1
+                      local line = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, start_line, false)[1]
+
+                      table.insert(entries, {
+                        bufnr = bufnr,
+                        lnum = start_line,
+                        col = edit.range.start.character + 1,
+                        text = line,
+                      })
+                    end
+
+                    num_updates = num_updates + vim.tbl_count(document.edits)
+
+                    local short_uri = string.sub(vim.uri_to_fname(uri), #vim.loop.cwd() + 2)
+                    table.insert(notification, string.format("\t- %d in %s", vim.tbl_count(document.edits), short_uri))
+                  end
+                end
+
+                -- collect changes
+                if result.changes then
+                  for uri, edits in pairs(result.changes) do
+                    num_files = num_files + 1
+                    bufnr = vim.uri_to_bufnr(uri)
+
+                    for _, edit in ipairs(edits) do
+                      local start_line = edit.range.start.line + 1
+                      local line = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, start_line, false)[1]
+
+                      table.insert(entries, {
+                        bufnr = bufnr,
+                        lnum = start_line,
+                        col = edit.range.start.character + 1,
+                        text = line,
+                      })
+                    end
+
+                    num_updates = num_updates + vim.tbl_count(edits)
+
+                    local short_uri = string.sub(vim.uri_to_fname(uri), #vim.loop.cwd() + 2)
+                    table.insert(notification, string.format("\t- %d in %s", vim.tbl_count(edits), short_uri))
+                  end
+                end
+
+                -- format notification header and content
+                local notification_str = ""
+                if num_files > 1 then
+                  -- add header
+                  table.insert(notification, 1, string.format("made %d change%s in %d files", num_updates, (num_updates > 1 and "s") or "", num_files))
+
+                  notification_str = table.concat(notification, "\n")
+                else
+                  -- only 1 entry in notification table for the single file
+                  notification_str = string.format("made %s", notification[1]:sub(4))
+
+                  -- add word "change"/"changes" at this point
+                  local insert_loc = notification_str:find("in")
+
+                  notification_str = table.concat({
+                    notification_str:sub(1, insert_loc - 1),
+                    string.format("change%s ", (num_updates > 1 and "s") or ""),
+                    notification_str:sub(insert_loc),
+                  }, "")
+                end
+
+                -- vim.notify(notification_str, L.INFO, {
+                --   title = string.format("[LSP] rename: %s -> %s", position_params.oldName, position_params.newName),
+                --   timeout = 2500,
+                -- })
+
+                -- set qflist if more than 1 file
+                if num_files > 1 then
+                  U.qf_populate(entries, { title = "Applied Rename Changes" })
+                  vim.cmd("Trouble qflist open")
+                end
+              end)
+            end
+
+            local function prepare_rename()
+              current_name = vim.fn.expand("<cword>")
+              rename_prompt = current_name .. default_rename_prompt
+              bufnr = vim.api.nvim_create_buf(false, true)
+              vim.api.nvim_buf_set_option(bufnr, "buftype", "prompt")
+              vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
+              vim.api.nvim_buf_set_option(bufnr, "filetype", "prompt")
+              vim.api.nvim_buf_add_highlight(bufnr, -1, "Title", 0, 0, #rename_prompt)
+              vim.fn.prompt_setprompt(bufnr, rename_prompt)
+              local width = #current_name + #rename_prompt + 15
+              local winnr = vim.api.nvim_open_win(bufnr, true, {
+                relative = "cursor",
+                width = width,
+                height = 1,
+                row = -3,
+                col = 1,
+                style = "minimal",
+                border = BORDER_STYLE,
+              })
+
+              vim.api.nvim_win_set_option(
+                winnr,
+                "winhl",
+                table.concat({
+                  "Normal:NormalFloat",
+                  "FloatBorder:FloatBorder",
+                  "CursorLine:Visual",
+                  "Search:None",
+                }, ",")
+              )
+
+              vim.keymap.set("i", "<CR>", rename_callback, { buffer = bufnr })
+              vim.keymap.set("i", "<esc>", function() cleanup_rename_callback(winnr) end, { buffer = bufnr })
+              vim.keymap.set("i", "<c-c>", function() cleanup_rename_callback(winnr) end, { buffer = bufnr })
+
+              vim.cmd.startinsert()
+            end
+
+            prepare_rename()
+            -- vim.ui.input({ prompt = "rename to -> ", default = position_params.oldName }, rename_callback)
+          end
+
+          -- vim.lsp.buf.rename = qf_rename
+          qf_rename()
         end, "[r]ename")
+
+        command("LspCapabilities", function(ctx)
+          local filter = ctx.args == "" and { bufnr = 0 } or { name = ctx.args }
+          local clients = vim.lsp.get_clients(filter)
+          local clientInfo = vim.tbl_map(function(c) return c.name .. "\n" .. vim.inspect(c) end, clients)
+          local msg = table.concat(clientInfo, "\n\n")
+          vim.notify(msg)
+        end, {
+          nargs = "?",
+          complete = function()
+            local clients = vim.tbl_map(function(c) return c.name end, vim.lsp.get_clients())
+            table.sort(clients)
+            vim.fn.uniq(clients)
+            return clients
+          end,
+        })
 
         augroup("LspDiagnostics", {
           {
@@ -207,6 +413,35 @@ return {
         local max_width = math.min(math.floor(vim.o.columns * 0.7), 100)
         local max_height = math.min(math.floor(vim.o.lines * 0.3), 30)
 
+        ---@param diag vim.Diagnostic
+        ---@return string
+        local function diag_msg_format(diag)
+          local msg = diag.message
+          if diag.source == "typos" then
+            msg = msg:gsub("should be", "󰁔"):gsub("`", "")
+          elseif diag.source == "Lua Diagnostics." then
+            msg = msg:gsub("%.$", "")
+          end
+          return msg
+        end
+
+        ---@param diag vim.Diagnostic
+        ---@param mode "virtual_text"|"float"
+        ---@return string displayedText
+        ---@return string? highlight_group
+        local function diag_source_as_suffix(diag, mode)
+          if not (diag.source or diag.code) then return "" end
+          local source = (diag.source or ""):gsub(" ?%.$", "") -- trailing dot for lua_ls
+          local rule = diag.code and ": " .. diag.code or ""
+
+          if mode == "virtual_text" then
+            return (" (%s%s)"):format(source, rule)
+          elseif mode == "float" then
+            return (" %s%s"):format(source, rule), "Comment"
+          end
+          return ""
+        end
+
         local vim_diag = vim.diagnostic
         vim_diag.config({
           underline = true,
@@ -232,14 +467,37 @@ return {
             -- severity = { min = vim_diag.severity.WARN },
           },
           float = {
-            -- border = BORDER_STYLE,
+            show_header = true,
+            source = true, -- or "always", "if_many" (for more than one source)
+            border = BORDER_STYLE,
+            focusable = false,
+            severity_sort = true,
             max_width = max_width,
             max_height = max_height,
-            -- severity = { min = vim_diag.severity.WARN },
+            close_events = {
+              "CursorMoved",
+              "BufHidden",
+              "InsertCharPre",
+              "BufLeave",
+              "InsertEnter",
+              "FocusLost",
+              "BufWritePre",
+              "BufWritePost",
+            },
+            scope = "cursor",
+            header = { " Diagnostics:", "DiagnosticHeader" },
+            suffix = function(diag) return diag_source_as_suffix(diag, "float") end,
+            prefix = function(diag, i, _total)
+              local level = vim_diag.severity[diag.severity]
+              local prefix = fmt("%d. ", i)
+              -- local prefix = fmt("%d. %s ", i, mega.icons.lsp[level:lower()])
+              return prefix, "Diagnostic" .. level:gsub("^%l", string.upper)
+            end,
           },
           severity_sort = true,
           virtual_text = {
             severity = { min = vim_diag.severity.ERROR },
+            suffix = function(diag) return diag_source_as_suffix(diag, "virtual_text") end,
           },
           update_in_insert = false,
         })
