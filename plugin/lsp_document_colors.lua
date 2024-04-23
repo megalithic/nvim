@@ -198,24 +198,14 @@ end
 
 require("mega.autocmds").augroup("DocumentColors", {
   {
-    event = { "LspAttach" },
-    desc = "Attach document color LSP functionality to an LSP-connected buffer/client",
-    command = function(evt)
-      local bufnr = evt.buf
-      local client = vim.lsp.get_client_by_id(evt.data.client_id)
-      if client ~= nil and client.supports_method("textDocument/documentColor", { bufnr = bufnr }) then
-        M.buf_attach(bufnr, { single_column = true, col_count = 2, mode = "bg" })
-      end
-    end,
+    event = { "BufEnter" },
+    desc = "Attach document color LSP functionality to a buffer",
+    command = function(evt) M.buf_attach(evt.buf, { single_column = true, col_count = 2, mode = "bg" }) end,
   },
   {
-    event = { "LspDetach" },
-    desc = "Detach document color LSP functionality from an LSP-connected buffer/client",
-    command = function(evt)
-      local bufnr = evt.buf
-      local client = vim.lsp.get_client_by_id(evt.data.client_id)
-      if client ~= nil and client.supports_method("textDocument/documentColor", { bufnr = bufnr }) then M.buf_detach(bufnr) end
-    end,
+    event = { "BufLeave" },
+    desc = "Detach document color LSP functionality from a buffer",
+    command = function(evt) M.buf_detach(evt.buf) end,
   },
 })
 
