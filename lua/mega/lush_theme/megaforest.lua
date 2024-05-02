@@ -278,8 +278,10 @@ local theme = lush(function(injected_functions)
     LspCodeLens({ DiagnosticInfo, fg = C.bg2 }), -- Used to color the virtual text of the codelens,
     LspCodeLensSeparator({ DiagnosticHint }),
 
+    LspInlayHint({ NonText }),
     LspInfoBorder({ FloatBorder }),
     LspSignatureActiveParameter({ Visual }),
+    SnippetTabstop({ Visual }),
 
     ---- :help notify ----------------------------------------------------------
 

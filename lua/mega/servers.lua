@@ -1,6 +1,7 @@
 local fn, lsp = vim.fn, vim.lsp
 local fmt = string.format
 local L = vim.log.levels
+local U = require("mega.utils")
 local ok_lsp, lspconfig = pcall(require, "lspconfig")
 if not ok_lsp then return nil end
 
@@ -335,50 +336,63 @@ M.list = {
     }
   end,
   marksman = {},
-  -- nextls = {},
-  -- nextls = function(...)
-  --   -- dd(...)
-  --   -- print("nextls server config")
-  --   if not mega.lsp.is_enabled_elixir_ls 'nextls' then
-  --     return nil
-  --   end
-  --
-  --   return {
-  --     single_file_support = true,
-  --     filetypes = { 'elixir', 'eelixir', 'heex', 'surface' },
-  --     log_level = vim.lsp.protocol.MessageType.Error,
-  --     message_level = vim.lsp.protocol.MessageType.Error,
-  --     root_dir = function(fname)
-  --       local matches = vim.fs.find({ 'mix.exs' }, { upward = true, limit = 2, path = fname })
-  --       local child_or_root_path, maybe_umbrella_path = unpack(matches)
-  --       local root_dir = vim.fs.dirname(maybe_umbrella_path or child_or_root_path)
-  --
-  --       return root_dir
-  --     end,
-  --     init_options = {
-  --       mix_env = 'dev',
-  --       mix_target = 'host',
-  --       experimental = {
-  --         completions = {
-  --           enable = true,
-  --         },
-  --       },
-  --     },
-  --     settings = {
-  --       experimental = {
-  --         completions = {
-  --           enable = true,
-  --         },
-  --       },
-  --       -- mixEnv = "dev",
-  --       fetchDeps = false,
-  --       dialyzerEnabled = true,
-  --       dialyzerFormat = 'dialyxir_long',
-  --       enableTestLenses = false,
-  --       suggestSpecs = true,
-  --     },
-  --   }
-  -- end,
+  nextls = function(...)
+    if not U.lsp.is_enabled_elixir_ls("nextls") then return nil end
+
+    return {
+      single_file_support = true,
+      filetypes = { "elixir", "eelixir", "heex", "surface" },
+      log_level = vim.lsp.protocol.MessageType.Error,
+      message_level = vim.lsp.protocol.MessageType.Error,
+      root_dir = function(fname)
+        local matches = vim.fs.find({ "mix.exs" }, { upward = true, limit = 2, path = fname })
+        local child_or_root_path, maybe_umbrella_path = unpack(matches)
+        local root_dir = vim.fs.dirname(maybe_umbrella_path or child_or_root_path)
+
+        return root_dir
+      end,
+      cmd_env = {
+        NEXTLS_SPITFIRE_ENABLED = 1,
+      },
+      env = {
+        NEXTLS_SPITFIRE_ENABLED = 1,
+      },
+      init_options = {
+        cmd_env = {
+          NEXTLS_SPITFIRE_ENABLED = 1,
+        },
+        env = {
+          NEXTLS_SPITFIRE_ENABLED = 1,
+        },
+        mix_env = "dev",
+        mix_target = "host",
+        experimental = {
+          completions = {
+            enable = true,
+          },
+        },
+      },
+      settings = {
+        cmd_env = {
+          NEXTLS_SPITFIRE_ENABLED = 1,
+        },
+        env = {
+          NEXTLS_SPITFIRE_ENABLED = 1,
+        },
+        experimental = {
+          completions = {
+            enable = true,
+          },
+        },
+        -- mixEnv = "dev",
+        fetchDeps = false,
+        dialyzerEnabled = true,
+        dialyzerFormat = "dialyxir_long",
+        enableTestLenses = false,
+        suggestSpecs = true,
+      },
+    }
+  end,
   prosemd_lsp = nil,
   -- prosemd_lsp = function()
   --   if vim.g.started_by_firenvim or vim.env.TMUX_POPUP then
@@ -613,70 +627,86 @@ M.unofficial = {
       }
     end
   end,
-  -- nextls = function()
-  --   if not mega.lsp.is_enabled_elixir_ls 'nextls' then
-  --     return
-  --   end
-  --   local configs = require 'lspconfig.configs'
-  --
-  --   if not configs.nextls then
-  --     local cmd = function(use_homebrew)
-  --       local arch = {
-  --         ['arm64'] = 'arm64',
-  --         ['aarch64'] = 'arm64',
-  --         ['amd64'] = 'amd64',
-  --         ['x86_64'] = 'amd64',
-  --       }
-  --
-  --       local os_name = string.lower(vim.uv.os_uname().sysname)
-  --       local current_arch = arch[string.lower(vim.uv.os_uname().machine)]
-  --       local build_bin = fmt('next_ls_%s_%s', os_name, current_arch)
-  --
-  --       if use_homebrew then
-  --         return { 'nextls', '--stdio' }
-  --       end
-  --       return { fmt('%s/lsp/nextls/burrito_out/%s', vim.env.XDG_DATA_HOME, build_bin), '--stdio' }
-  --     end
-  --
-  --     local homebrew_enabled = false
-  --     configs.nextls = {
-  --       default_config = {
-  --         cmd = cmd(homebrew_enabled),
-  --         single_file_support = true,
-  --         filetypes = { 'elixir', 'eelixir', 'heex', 'surface' },
-  --         root_dir = function(fname)
-  --           local matches = vim.fs.find({ 'mix.exs' }, { upward = true, limit = 2, path = fname })
-  --           local child_or_root_path, maybe_umbrella_path = unpack(matches)
-  --           local root_dir = vim.fs.dirname(maybe_umbrella_path or child_or_root_path)
-  --
-  --           return root_dir
-  --         end,
-  --         log_level = vim.lsp.protocol.MessageType.Error,
-  --         message_level = vim.lsp.protocol.MessageType.Error,
-  --         cmd_env = {
-  --           NEXTLS_SPITFIRE_ENABLED = 1,
-  --         },
-  --         init_options = {
-  --           mix_env = 'dev',
-  --           mix_target = 'host',
-  --           experimental = {
-  --             completions = {
-  --               enable = true,
-  --             },
-  --           },
-  --         },
-  --         settings = {
-  --           -- mixEnv = "dev",
-  --           fetchDeps = false,
-  --           dialyzerEnabled = true,
-  --           dialyzerFormat = 'dialyxir_long',
-  --           enableTestLenses = false,
-  --           suggestSpecs = true,
-  --         },
-  --       },
-  --     }
-  --   end
-  -- end,
+  nextls = function()
+    if not U.lsp.is_enabled_elixir_ls("nextls") then return end
+    local configs = require("lspconfig.configs")
+
+    if not configs.nextls then
+      local cmd = function(use_homebrew)
+        local arch = {
+          ["arm64"] = "arm64",
+          ["aarch64"] = "arm64",
+          ["amd64"] = "amd64",
+          ["x86_64"] = "amd64",
+        }
+
+        local os_name = string.lower(vim.uv.os_uname().sysname)
+        local current_arch = arch[string.lower(vim.uv.os_uname().machine)]
+        local build_bin = fmt("next_ls_%s_%s", os_name, current_arch)
+
+        if use_homebrew then return { "nextls", "--stdio" } end
+        return { fmt("%s/lsp/nextls/burrito_out/%s", vim.env.XDG_DATA_HOME, build_bin), "--stdio" }
+      end
+
+      local homebrew_enabled = false
+      configs.nextls = {
+        default_config = {
+          cmd = cmd(homebrew_enabled),
+          single_file_support = true,
+          filetypes = { "elixir", "eelixir", "heex", "surface" },
+          root_dir = function(fname)
+            local matches = vim.fs.find({ "mix.exs" }, { upward = true, limit = 2, path = fname })
+            local child_or_root_path, maybe_umbrella_path = unpack(matches)
+            local root_dir = vim.fs.dirname(maybe_umbrella_path or child_or_root_path)
+
+            return root_dir
+          end,
+          log_level = vim.lsp.protocol.MessageType.Error,
+          message_level = vim.lsp.protocol.MessageType.Error,
+          cmd_env = {
+            NEXTLS_SPITFIRE_ENABLED = 1,
+          },
+          env = {
+            NEXTLS_SPITFIRE_ENABLED = 1,
+          },
+          init_options = {
+            cmd_env = {
+              NEXTLS_SPITFIRE_ENABLED = 1,
+            },
+            env = {
+              NEXTLS_SPITFIRE_ENABLED = 1,
+            },
+            mix_env = "dev",
+            mix_target = "host",
+            experimental = {
+              completions = {
+                enable = true,
+              },
+            },
+          },
+          settings = {
+            cmd_env = {
+              NEXTLS_SPITFIRE_ENABLED = 1,
+            },
+            env = {
+              NEXTLS_SPITFIRE_ENABLED = 1,
+            },
+            experimental = {
+              completions = {
+                enable = true,
+              },
+            },
+            -- mixEnv = "dev",
+            fetchDeps = false,
+            dialyzerEnabled = true,
+            dialyzerFormat = "dialyxir_long",
+            enableTestLenses = false,
+            suggestSpecs = true,
+          },
+        },
+      }
+    end
+  end,
 }
 
 M.load_unofficial = function()

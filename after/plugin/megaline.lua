@@ -45,25 +45,25 @@ augroup("megaline", {
   --   event = { "LspProgress" },
   --   command = function() pcall(vim.cmd.redrawstatus) end,
   -- },
-  -- {
-  --   event = { "CursorMoved" },
-  --   pattern = { "*" },
-  --   command = function()
-  --     -- TODO: wrap all of this in an xpcall to handle an error raised when searching, for example, for `dbg\(`
-  --     if vim.o.hlsearch then
-  --       local timer = vim.loop.new_timer()
-  --       search_count_timer = timer
-  --       timer:start(0, 200, function()
-  --         vim.schedule(function()
-  --           if timer == search_count_timer then
-  --             pcall(vim.fn.searchcount, { recompute = 1, maxcount = 0, timeout = 100 })
-  --             pcall(vim.cmd.redrawstatus)
-  --           end
-  --         end)
-  --       end)
-  --     end
-  --   end,
-  -- },
+  {
+    event = { "CursorMoved" },
+    pattern = { "*" },
+    command = function()
+      -- TODO: wrap all of this in an xpcall to handle an error raised when searching, for example, for `dbg\(`
+      if vim.o.hlsearch then
+        local timer = vim.uv.new_timer()
+        search_count_timer = timer
+        timer:start(0, 200, function()
+          vim.schedule(function()
+            if timer == search_count_timer then
+              pcall(vim.fn.searchcount, { recompute = 1, maxcount = 0, timeout = 100 })
+              pcall(vim.cmd.redrawstatus)
+            end
+          end)
+        end)
+      end
+    end,
+  },
 })
 
 -- ( SETTERS ) -----------------------------------------------------------------

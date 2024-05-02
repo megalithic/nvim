@@ -273,16 +273,12 @@ function M.apply()
       event = { "BufEnter", "WinEnter" },
       command = function(evt)
         vim.defer_fn(function()
-          -- enable ibl for active buffer
           local ibl_ok, ibl = pcall(require, "ibl")
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = SETTINGS.indent_char } }) end
         end, 1)
         vim.wo.cursorline = true
 
-        if not vim.g.started_by_firenvim then
-          -- print("colorizer.attach > " .. evt.buf)
-          require("colorizer").attach_to_buffer(evt.buf, SETTINGS.colorizer)
-        end
+        if not vim.g.started_by_firenvim then require("colorizer").attach_to_buffer(evt.buf, SETTINGS.colorizer) end
       end,
     },
     {
@@ -290,15 +286,11 @@ function M.apply()
       event = { "BufLeave", "WinLeave" },
       command = function(evt)
         vim.defer_fn(function()
-          -- disable ibl for inactive buffer
           local ibl_ok, ibl = pcall(require, "ibl")
           if ibl_ok then ibl.setup_buffer(evt.buf, { indent = { char = "" } }) end
         end, 1)
         vim.wo.cursorline = false
-        if not vim.g.started_by_firenvim then
-          -- print("colorizer.dettach > " .. evt.buf)
-          require("colorizer").detach_from_buffer(evt.buf)
-        end
+        if not vim.g.started_by_firenvim then require("colorizer").detach_from_buffer(evt.buf) end
       end,
     },
   })
@@ -308,20 +300,20 @@ function M.apply()
       enabled = not vim.g.started_by_firenvim,
       desc = "OnInsertEnter",
       event = { "InsertEnter" },
-      command = function(evt)
-        vim.diagnostic.disable()
-        vim.wo.number = true
-        vim.wo.relativenumber = false
+      command = function(_evt)
+        vim.diagnostic.enable(not vim.diagnostic.is_enabled())
+        -- vim.wo.number = true
+        -- vim.wo.relativenumber = false
       end,
     },
     {
       enabled = not vim.g.started_by_firenvim,
       desc = "OnInsertLeave",
       event = { "InsertLeave" },
-      command = function(evt)
+      command = function(_evt)
         vim.diagnostic.enable()
-        vim.wo.number = true
-        vim.wo.relativenumber = true
+        -- vim.wo.number = true
+        -- vim.wo.relativenumber = true
       end,
     },
   })
@@ -350,6 +342,54 @@ function M.apply()
   --     end,
   --   },
   -- })
+
+  -- -----------------------------------------------------------------------------
+  -- # IncSearch behaviours
+  -- HT: akinsho
+  -- -----------------------------------------------------------------------------
+  vim.keymap.set({ "n", "v", "o", "i", "c", "t" }, "<Plug>(StopHL)", "execute(\"nohlsearch\")[-1]", { expr = true })
+  local function stop_hl()
+    if vim.v.hlsearch == 0 or vim.api.nvim_get_mode().mode ~= "n" then return end
+    vim.api.nvim_feedkeys(vim.keycode("<Plug>(StopHL)"), "m", false)
+  end
+  local function hl_search()
+    local col = vim.api.nvim_win_get_cursor(0)[2]
+    local curr_line = vim.api.nvim_get_current_line()
+    local ok, match = pcall(vim.fn.matchstrpos, curr_line, vim.fn.getreg("/"), 0)
+    if not ok then return end
+    local _, p_start, p_end = unpack(match)
+    -- if the cursor is in a search result, leave highlighting on
+    if col < p_start or col > p_end then stop_hl() end
+  end
+
+  M.augroup("IncSearchHighlight", {
+    {
+      event = { "CursorMoved" },
+      command = function() hl_search() end,
+    },
+    {
+      event = { "InsertEnter" },
+      command = function(evt)
+        if vim.bo[evt.buf].filetype == "megaterm" then return end
+        stop_hl()
+      end,
+    },
+    {
+      event = { "OptionSet" },
+      pattern = { "hlsearch" },
+      command = function()
+        vim.schedule(function() vim.cmd.redrawstatus() end)
+      end,
+    },
+    {
+      event = { "RecordingEnter" },
+      command = function() vim.o.hlsearch = false end,
+    },
+    {
+      event = { "RecordingLeave" },
+      command = function() vim.o.hlsearch = true end,
+    },
+  })
 
   M.augroup("Utilities", {
     {

@@ -46,14 +46,105 @@ return {
           ["<leader>c"] = { name = "[C]ode", _ = "which_key_ignore" },
           ["<leader>d"] = { name = "[D]ocument", _ = "which_key_ignore" },
           ["<leader>r"] = { name = "[R]ename", _ = "which_key_ignore" },
+          ["<leader>g"] = { name = "[G]it", _ = "which_key_ignore" },
+          ["<leader>t"] = { name = "[T]erminal", _ = "which_key_ignore" },
           ["<leader>f"] = { name = "[F]ind", _ = "which_key_ignore" },
           ["<leader>w"] = { name = "[W]orkspace", _ = "which_key_ignore" },
           ["<leader>p"] = { name = "[P]lugins", _ = "which_key_ignore" },
-          ["<localleader>t"] = { name = "[T]test", _ = "which_key_ignore" },
+          ["<localleader>t"] = { name = "[T]est", _ = "which_key_ignore" },
+          ["<localleader>g"] = { name = "[G]it", _ = "which_key_ignore" },
+          ["<localleader>h"] = { name = "[H]unk", _ = "which_key_ignore" },
+          ["<localleader>r"] = { name = "[R]epl", _ = "which_key_ignore" },
         })
       end,
     },
+    {
+      "mrjones2014/smart-splits.nvim",
+      lazy = false,
+      commit = "36bfe63246386fc5ae2679aa9b17a7746b7403d5",
+      opts = { at_edge = "stop" },
+      -- build = "./kitty/install-kittens.bash",
+      keys = {
+        { "<A-h>", function() require("smart-splits").resize_left() end },
+        { "<A-l>", function() require("smart-splits").resize_right() end },
+        -- moving between splits
+        { "<C-h>", function() require("smart-splits").move_cursor_left() end },
+        { "<C-j>", function() require("smart-splits").move_cursor_down() end },
+        { "<C-k>", function() require("smart-splits").move_cursor_up() end },
+        { "<C-l>", function() require("smart-splits").move_cursor_right() end },
+        -- swapping buffers between windows
+        { "<leader><leader>h", function() require("smart-splits").swap_buf_left() end, desc = "swap left" },
+        { "<leader><leader>j", function() require("smart-splits").swap_buf_down() end, desc = "swap down" },
+        { "<leader><leader>k", function() require("smart-splits").swap_buf_up() end, desc = "swap up" },
+        { "<leader><leader>l", function() require("smart-splits").swap_buf_right() end, desc = "swap right" },
+      },
+    },
+    {
+      "folke/flash.nvim",
+      event = "VeryLazy",
+      opts = {
+        jump = { nohlsearch = true, autojump = false },
+        prompt = {
+          -- Place the prompt above the statusline.
+          win_config = { row = -3 },
+        },
+        search = {
+          multi_window = false,
+          mode = "exact",
+          exclude = {
+            "cmp_menu",
+            "flash_prompt",
+            "qf",
+            function(win)
+              -- Floating windows from bqf.
+              if vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)):match("BqfPreview") then return true end
 
+              -- Non-focusable windows.
+              return not vim.api.nvim_win_get_config(win).focusable
+            end,
+          },
+        },
+        modes = {
+          search = {
+            enabled = false,
+          },
+          char = {
+            keys = { "f", "F", "t", "T", ";" }, -- NOTE: using "," here breaks which-key
+          },
+        },
+      },
+      keys = {
+        {
+          "s",
+          mode = { "n", "x", "o" },
+          function() require("flash").jump() end,
+        },
+        {
+          "m",
+          mode = { "o", "x" },
+          function() require("flash").treesitter() end,
+        },
+        { "vv", mode = { "n", "o", "x" }, function() require("flash").treesitter() end },
+        {
+          "r",
+          function() require("flash").remote() end,
+          mode = "o",
+          desc = "Remote Flash",
+        },
+        {
+          "<c-s>",
+          function() require("flash").toggle() end,
+          mode = { "c" },
+          desc = "Toggle Flash Search",
+        },
+        {
+          "R",
+          function() require("flash").treesitter_search() end,
+          mode = { "o", "x" },
+          desc = "Flash Treesitter Search",
+        },
+      },
+    },
     -- NOTE: Plugins can specify dependencies.
     --
     -- The dependencies are proper plugin specifications as well - anything
@@ -117,5 +208,20 @@ return {
 
     -- Highlight todo, notes, etc in comments
     { "folke/todo-comments.nvim", enabled = false, event = "VimEnter", dependencies = { "nvim-lua/plenary.nvim" }, opts = { signs = false } },
+    {
+      "kndndrj/nvim-dbee",
+      dependencies = {
+        "MunifTanjim/nui.nvim",
+      },
+      build = function()
+        -- Install tries to automatically detect the install method.
+        -- if it fails, try calling it with one of these parameters:
+        --    "curl", "wget", "bitsadmin", "go"
+        require("dbee").install()
+      end,
+      config = function()
+        require("dbee").setup(--[[optional config]])
+      end,
+    },
   },
 }

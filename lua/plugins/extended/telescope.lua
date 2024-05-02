@@ -49,9 +49,9 @@ return {
     },
     config = function()
       mega.picker = {
-        find_files = {},
-        grep = {},
-        startup = {},
+        find_files = nil,
+        grep = nil,
+        startup = nil,
       }
 
       local fmt = string.format
@@ -148,10 +148,10 @@ return {
             if key == "grepify" or key == "egrepify" then
               extensions("egrepify").egrepify(with_title(topts, { title = "live grep (egrepify)" }))
             elseif key == "undo" then
-              extensions("undo").undo(topts)
+              extensions("undo").undo(with_title(topts, { title = "undo" }))
             elseif key == "smart_open" or key == "smart" then
               extensions("smart_open").smart_open(with_title(topts, { title = "smartly find files" }))
-            elseif key == "grep" then
+            elseif key == "grep" or key == "live_grep" then
               extensions("live_grep_args").live_grep_args(with_title(topts, { title = "live grep args" }))
             elseif key == "corrode" then
               extensions("corrode").corrode(with_title(topts, { title = "find files (corrode)" }))
@@ -202,7 +202,7 @@ return {
         return require("telescope.themes").get_ivy(get_border(opts))
       end
 
-      local grep = function(...) ts.grep(ivy(...)) end
+      local grep = function(...) ts.live_grep(ivy(...)) end
       mega.picker.grep = grep
 
       -- Gets the root dir from either:
@@ -212,27 +212,29 @@ return {
       -- * cwd
       ---@param opts? table
       local find_files = function(opts)
-        opts = vim.tbl_deep_extend("force", opts, {})
-        local theme = opts["theme"] or "ivy"
+        opts = vim.tbl_deep_extend("force", opts or {}, {})
+        local picker = opts and opts["picker"] or "find_files"
+        local theme = opts and opts["theme"] or "ivy"
         local bufnr = vim.api.nvim_get_current_buf()
         local fn = vim.api.nvim_buf_get_name(bufnr)
 
         current_fn = fn
         -- opts.cwd = require("mega.utils").get_root()
         -- vim.notify(fmt("current project files root: %s", opts.cwd), vim.log.levels.DEBUG, { title = "telescope" })
-        local picker = ts.find_files
+        -- local picker = ts["find_files"]
 
         if theme == "ivy" then
-          picker(ivy(opts))
+          ts[picker](ivy(opts))
         elseif theme == "dropdown" then
-          picker(dropdown(opts))
+          ts[picker](dropdown(opts))
         else
-          picker(opts)
+          ts[picker](opts)
         end
       end
       mega.picker.find_files = find_files
+
       mega.picker.startup = function(bufnr)
-        find_files({
+        mega.picker.find_files({
           theme = "dropdown",
           hidden = true,
           no_ignore = false,
@@ -414,7 +416,7 @@ return {
               ["<c-q>"] = actions.smart_send_to_qflist + actions.open_qflist,
               ["<c-a>"] = { "<Home>", type = "command" },
               ["<c-e>"] = { "<End>", type = "command" },
-
+              ["<tab>"] = actions.toggle_selection,
               ["<S-Cr>"] = function(prompt_bufnr)
                 -- Use nvim-window-picker to choose the window by dynamically attaching a function
 
@@ -638,20 +640,20 @@ return {
       -- telescope.load_extension("zf-native")
 
       local builtin = require("telescope.builtin")
-      map("n", "<leader>ff", function() ts.smart_open(ivy({})) end, { desc = "[f]ind [f]iles" })
+      map("n", "<leader>ff", function() mega.picker.find_files({ picker = "smart_open" }) end, { desc = "[f]ind [f]iles" })
       map("n", "<leader>fh", ts.help_tags, { desc = "[f]ind [h]elp" })
       map("n", "<leader>fk", ts.keymaps, { desc = "[f]ind [k]eymaps" })
       -- map("n", "<leader>fs", ts.builtin, { desc = "[f]ind [f]elect Telescope" })
-      map("n", "<leader>a", ts.live_grep, { desc = "grep (live)" })
-      map("n", "<leader>A", ts.grep_string, { desc = "grep (under cursor)" })
-      -- map("n", "<leader>A", function() live_grep({ default_text = vim.fn.expand("<cword>") }) end, { desc = "grep (under cursor)" })
+      map("n", "<leader>a", mega.picker.grep, { desc = "grep (live)" })
+      -- map("n", "<leader>A", ts.grep_string, { desc = "grep (under cursor)" })
+      map("n", "<leader>A", function() mega.picker.grep({ default_text = vim.fn.expand("<cword>") }) end, { desc = "grep (under cursor)" })
       map({ "v", "x" }, "<leader>A", function()
         local pattern = require("mega.utils").get_visual_selection()
-        grep({ default_text = pattern })
+        mega.picker.grep({ default_text = pattern })
       end, { desc = "grep (selection)" })
 
       map("n", "<leader>fd", ts.diagnostics, { desc = "[S]earch [D]iagnostics" })
-      map("n", "<leader>fc", function() ts.find_files({ cwd = vim.fn.stdpath("config") }) end, { desc = "[f]ind in [c]onfig" })
+      map("n", "<leader>fc", function() mega.picker.find_files({ picker = "smart_open", cwd = vim.fn.stdpath("config") }) end, { desc = "[f]ind in [c]onfig" })
       map("n", "<leader>fr", ts.resume, { desc = "[S]earch [R]esume" })
       map("n", "<leader>f.", ts.oldfiles, { desc = "[S]earch Recent Files (\".\" for repeat)" })
       map("n", "<leader><leader>", ts.buffers, { desc = "[ ] Find existing buffers" })

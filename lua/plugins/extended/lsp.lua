@@ -139,6 +139,11 @@ return {
 
         -- if action opens up qf list, open the first item and close the list
         local function choose_list_first(options)
+          -- if num_files > 1 then
+          --   U.qf_populate(entries, { title = "Definitions" })
+          --   vim.cmd("Trouble qflist open")
+          -- end
+
           vim.fn.setqflist({}, " ", options)
           vim.cmd.cfirst()
         end
@@ -157,20 +162,21 @@ return {
         map("[d", function() goto_diagnostic_hl("prev") end, "Go to previous [D]iagnostic message")
         map("]d", function() goto_diagnostic_hl("next") end, "Go to next [D]iagnostic message")
 
-        -- map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
-        map("gd", function() vim.lsp.buf.definition({ on_list = choose_list_first }) end, "[g]oto [d]efinition")
+        map("gd", require("telescope.builtin").lsp_definitions, "[g]oto [d]efinition")
+        -- map("gd", function() vim.lsp.buf.definition({ on_list = choose_list_first }) end, "[g]oto [d]efinition")
         map("gD", function()
-          vim.cmd.split({ mods = { tab = vim.fn.tabpagenr() + 1 } })
-          vim.lsp.buf.definition({ on_list = choose_list_first })
+          vim.cmd.vsplit()
+          vim.lsp.buf.definition()
+          -- vim.lsp.buf.definition({ on_list = choose_list_first })
         end, "[g]oto [d]efinition (split)")
         map("gr", require("telescope.builtin").lsp_references, "[g]oto [r]eferences")
         map("gI", require("telescope.builtin").lsp_implementations, "[g]oto [i]mplementation")
         map("<leader>D", require("telescope.builtin").lsp_type_definitions, "type [d]efinition")
         map("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[d]ocument [s]ymbols")
-        map("<leader>ws", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[w]orkspace [s]ymbols")
+        map("<leader>dS", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[w]orkspace [s]ymbols")
         map("<leader>ca", vim.lsp.buf.code_action, "[c]ode [a]ction")
         map("K", vim.lsp.buf.hover, "hover documentation")
-        map("gD", vim.lsp.buf.declaration, "[g]oto [d]eclaration (e.g. to a header file in C)")
+        -- map("gD", vim.lsp.buf.declaration, "[g]oto [d]eclaration (e.g. to a header file in C)")
         map("<leader>rn", function()
           local params = vim.lsp.util.make_position_params()
           local current_symbol = vim.fn.expand("<cword>")
@@ -756,7 +762,7 @@ return {
         desc = "lsp: open output panel",
       },
     },
-    event = "LspAttach",
+    event = "VeryLazy",
     cmd = { "OutputPanel" },
     config = function() require("output_panel").setup() end,
   },

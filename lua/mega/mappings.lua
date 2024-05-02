@@ -30,10 +30,11 @@ map("n", "<esc>", function()
 end, { noremap = false, silent = true, desc = "EscDeluxe + Clear/Reset UI" })
 
 --  See `:help wincmd` for a list of all window commands
-map("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to the left window" })
-map("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
-map("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
-map("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
+-- @see: smart-splits.nvim
+-- map("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to the left window" })
+-- map("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
+-- map("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
+-- map("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
 
 map("n", "<leader>w", function(args) vim.api.nvim_command("silent! write") end, { desc = "write buffer" })
 map("n", "<leader>W", "<cmd>SudaWrite<cr>", { desc = "sudo write buffer" })
@@ -45,6 +46,11 @@ map("i", ",", ",<C-g>u")
 map("i", ".", ".<C-g>u")
 map("i", "!", "!<C-g>u")
 map("i", "?", "?<C-g>u")
+
+-- we don't want line joining with `J`
+map("n", "J", "<nop>")
+
+map("n", "<localleader><localleader>", "<C-^>")
 
 -- [[ better movements within a buffer ]] -------------------------------------------------------------------------------------------------------
 map("n", "H", "^")

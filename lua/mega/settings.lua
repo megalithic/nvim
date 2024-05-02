@@ -74,12 +74,12 @@ local M = {
     "env",
   },
   -- REF: elixir LSPs: elixir-tools(tools-elixirls, tools-nextls, credo), elixirls, nextls, lexical
-  enabled_elixir_ls = { "", "", "elixirls", "", "lexical" },
+  enabled_elixir_ls = { "", "", "elixirls", "nextls", "lexical" },
   disabled_lsp_formatters = { "tailwindcss", "html", "tsserver", "ls_emmet", "zk", "sumneko_lua" },
   formatter_exclusions = { "tools-elixirls", "tools-nextls", "", "nextls", "lexical" },
   diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "", "tsserver" },
   max_diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "lexical" },
-  completion_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "" },
+  completion_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "", "" },
   disable_autolint = false,
   disable_autoformat = false,
   markdown_fenced_languages = {
@@ -357,6 +357,7 @@ M.apply = function()
       -- Enable mouse mode, can be useful for resizing splits for example!
       mouse = "a",
 
+      showbreak = string.format("%s ", string.rep("↪", 1)), -- Make it so that long lines wrap smartly; alts: -> '…', '↳ ', '→','↪ '
       -- Don't show the mode, since it's already in the status line
       showmode = false,
       showcmd = false,
