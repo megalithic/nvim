@@ -51,6 +51,7 @@ return {
         "markdown",
         "markdown_inline",
         "nix",
+        "org",
         "perl",
         "psv",
         "python",

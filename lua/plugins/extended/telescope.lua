@@ -52,6 +52,8 @@ return {
         find_files = nil,
         grep = nil,
         startup = nil,
+        ivy = nil,
+        dropdown = nil,
       }
 
       local fmt = string.format
@@ -196,11 +198,13 @@ return {
         opts = vim.tbl_deep_extend("force", opts or {}, {})
         return require("telescope.themes").get_dropdown(get_border(opts))
       end
+      mega.dropdown = dropdown
 
       local function ivy(opts)
         opts = vim.tbl_deep_extend("force", opts or {}, { layout_config = { height = 0.3 } })
         return require("telescope.themes").get_ivy(get_border(opts))
       end
+      mega.ivy = ivy
 
       local grep = function(...) ts.live_grep(ivy(...)) end
       mega.picker.grep = grep

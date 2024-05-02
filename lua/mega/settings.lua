@@ -1,4 +1,5 @@
 local BORDER_STYLE = "none"
+local fmt = string.format
 
 local border_chars = {
   none = { " ", " ", " ", " ", " ", " ", " ", " " },
@@ -36,7 +37,22 @@ local current_border = function(opts)
   return border
 end
 
+local uname = vim.uv.os_uname().sysname
+local is_macos = uname == "Darwin"
+local is_linux = uname == "Linux"
+local is_windows = uname == "Windows"
+local home_path = os.getenv("HOME")
+local icloud_path = vim.env.ICLOUD_DIR
+local icloud_documents_path = vim.env.ICLOUD_DOCUMENTS_DIR
+local obsidian_vault_path = vim.env.OBSIDIAN_VAULT_DIR
+local dotfiles_path = vim.env.DOTS or vim.fn.expand("~/.dotfiles")
+local hammerspoon_path = fmt("%s/config/hammerspoon", dotfiles_path)
+
+-- is_remote_dev = vim.trim(vim.fn.system("hostname")) == "seth-dev",
+-- is_local_dev = vim.trim(vim.fn.system("hostname")) ~= "seth-dev",
+
 local M = {
+
   -- NOTE: char options (https://unicodeplus.com/): ┊│┆ ┊  ▎││ ▏▏│¦┆┊
   indent_scope_char = "│",
   indent_char = "┊",
@@ -340,6 +356,19 @@ M.apply = function()
       disable_autoformat = M.disable_autoformat,
       markdown_fenced_languages = M.markdown_fenced_languages,
       have_nerd_font = true,
+
+      open_command = is_macos and "open" or "xdg-open",
+      is_tmux_popup = vim.env.TMUX_POPUP ~= nil,
+      code = fmt("%s/code", home_path),
+      vim_path = fmt("%s/.config/nvim", home_path),
+      nvim_path = fmt("%s/.config/nvim", home_path),
+      cache_path = fmt("%s/.cache/nvim", home_path),
+      local_state_path = fmt("%s/.local/state/nvim", home_path),
+      local_share_path = fmt("%s/.local/share/nvim", home_path),
+      notes_path = fmt("%s/_notes", icloud_documents_path),
+      org_path = fmt("%s/_org", icloud_documents_path),
+      neorg_path = fmt("%s/_org", icloud_documents_path),
+      hs_emmy_path = fmt("%s/Spoons/EmmyLua.spoon", hammerspoon_path),
     },
     o = {},
     opt = {

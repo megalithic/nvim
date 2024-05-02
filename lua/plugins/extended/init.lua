@@ -14,18 +14,24 @@ return {
         vim.g.lastplace_open_folds = true
       end,
     },
-
-    "tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
+    { "tpope/vim-eunuch", cmd = { "Move", "Rename", "Remove", "Delete", "Mkdir", "SudoWrite", "Chmod" } },
+    { "tpope/vim-rhubarb", event = { "VeryLazy" } },
+    { "tpope/vim-repeat", lazy = false },
+    { "tpope/vim-unimpaired", event = { "VeryLazy" } },
+    { "tpope/vim-apathy", event = { "VeryLazy" } },
+    { "tpope/vim-scriptease", event = { "VeryLazy" }, cmd = { "Messages", "Mess", "Noti" } },
+    { "tpope/vim-sleuth" }, -- Detect tabstop and shiftwidth automatically
+    { "EinfachToll/DidYouMean", event = { "BufNewFile" }, init = function() vim.g.dym_use_fzf = true end },
+    { "ConradIrwin/vim-bracketed-paste" }, -- FIXME: delete?
+    { "ryvnf/readline.vim", event = "CmdlineEnter" },
     -- { "brenoprata10/nvim-highlight-colors", opts = { enable_tailwind = true } },
     {
       "NvChad/nvim-colorizer.lua",
       event = { "BufReadPre" },
       config = function() require("colorizer").setup(SETTINGS.colorizer) end,
     },
-
     -- "gc" to comment visual regions/lines
     { "numToStr/Comment.nvim", opts = {} },
-
     {
       "folke/trouble.nvim",
       branch = "dev",
@@ -43,18 +49,55 @@ return {
 
         -- Document existing key chains
         require("which-key").register({
-          ["<leader>c"] = { name = "[C]ode", _ = "which_key_ignore" },
-          ["<leader>d"] = { name = "[D]ocument", _ = "which_key_ignore" },
-          ["<leader>r"] = { name = "[R]ename", _ = "which_key_ignore" },
-          ["<leader>g"] = { name = "[G]it", _ = "which_key_ignore" },
-          ["<leader>t"] = { name = "[T]erminal", _ = "which_key_ignore" },
-          ["<leader>f"] = { name = "[F]ind", _ = "which_key_ignore" },
-          ["<leader>w"] = { name = "[W]orkspace", _ = "which_key_ignore" },
-          ["<leader>p"] = { name = "[P]lugins", _ = "which_key_ignore" },
-          ["<localleader>t"] = { name = "[T]est", _ = "which_key_ignore" },
-          ["<localleader>g"] = { name = "[G]it", _ = "which_key_ignore" },
-          ["<localleader>h"] = { name = "[H]unk", _ = "which_key_ignore" },
-          ["<localleader>r"] = { name = "[R]epl", _ = "which_key_ignore" },
+          ["<leader>c"] = { name = "[c]ode", _ = "which_key_ignore" },
+          ["<leader>d"] = { name = "[d]ocument", _ = "which_key_ignore" },
+          ["<leader>e"] = {
+            name = "+edit files",
+            r = { function() require("mega.utils.lsp").rename_file() end, "rename file (lsp) to <input>" },
+            s = { [[<cmd>SaveAsFile<cr>]], "save file as <input>" },
+            e = "oil: open (edit)", -- NOTE: change in plugins/extended/oil.lua
+            v = "oil: open (vsplit)", -- NOTE: change in plugins/extended/oil.lua
+            d = {
+              function()
+                if vim.fn.confirm("Duplicate file?", "&Yes\n&No", 2, "Question") == 1 then vim.cmd("Duplicate") end
+              end,
+              "duplicate file?",
+            },
+            D = {
+              function()
+                if vim.fn.confirm("Delete file?", "&Yes\n&No", 2, "Question") == 1 then vim.cmd("Delete!") end
+              end,
+              "delete file?",
+            },
+            yp = {
+              function()
+                vim.cmd([[let @+ = expand("%")]])
+                vim.notify(fmt("yanked %s to clipboard", vim.fn.expand("%")))
+              end,
+              "yank path to clipboard",
+            },
+          },
+
+          ["<leader>f"] = {
+            name = "[f]ind (" .. vim.g.picker .. ")",
+            _ = "which_key_ignore",
+          },
+          ["<leader>l"] = {
+            name = "[l]sp",
+            i = { name = "[i]nfo" },
+            _ = "which_key_ignore",
+          },
+          ["<leader>g"] = { name = "[g]it", _ = "which_key_ignore" },
+          ["<leader>n"] = { name = "[n]otes", _ = "which_key_ignore" },
+          ["<leader>p"] = { name = "[p]lugins", _ = "which_key_ignore" },
+          ["<leader>r"] = { name = "[r]ename", _ = "which_key_ignore" },
+          ["<leader>t"] = { name = "[t]erminal", _ = "which_key_ignore" },
+          ["<leader>w"] = { name = "[w]orkspace", _ = "which_key_ignore" },
+          ["<leader>z"] = { name = "[z]k", _ = "which_key_ignore" },
+          ["<localleader>g"] = { name = "[g]it", _ = "which_key_ignore" },
+          ["<localleader>h"] = { name = "[h]unk", _ = "which_key_ignore" },
+          ["<localleader>r"] = { name = "[r]epl", _ = "which_key_ignore" },
+          ["<localleader>t"] = { name = "[t]est", _ = "which_key_ignore" },
         })
       end,
     },
@@ -145,13 +188,6 @@ return {
         },
       },
     },
-    -- NOTE: Plugins can specify dependencies.
-    --
-    -- The dependencies are proper plugin specifications as well - anything
-    -- you do for a plugin at the top level, you can do for a dependency.
-    --
-    -- Use the `dependencies` key to specify the dependencies of a particular plugin
-
     -- {
     --   "stevearc/conform.nvim",
     --   lazy = false,
@@ -186,28 +222,6 @@ return {
     --     },
     --   },
     -- },
-
-    { -- You can easily change to a different colorscheme.
-      -- Change the name of the colorscheme plugin below, and then
-      -- change the command in the config to whatever the name of that colorscheme is.
-      --
-      -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-      "folke/tokyonight.nvim",
-      cond = false,
-      priority = 1000, -- Make sure to load this before all the other start plugins.
-      init = function()
-        -- Load the colorscheme here.
-        -- Like many other themes, this one has different styles, and you could load
-        -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-        vim.cmd.colorscheme("tokyonight-night")
-
-        -- You can configure highlights by doing something like:
-        vim.cmd.hi("Comment gui=none")
-      end,
-    },
-
-    -- Highlight todo, notes, etc in comments
-    { "folke/todo-comments.nvim", enabled = false, event = "VimEnter", dependencies = { "nvim-lua/plenary.nvim" }, opts = { signs = false } },
     {
       "kndndrj/nvim-dbee",
       dependencies = {
@@ -223,5 +237,10 @@ return {
         require("dbee").setup(--[[optional config]])
       end,
     },
+  },
+  {
+    "nacro90/numb.nvim",
+    event = "CmdlineEnter",
+    opts = {},
   },
 }
