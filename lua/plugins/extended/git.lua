@@ -6,13 +6,14 @@ local git_keys = {}
 if vim.g.gitter == "neogit" then
   git_keys = {
     { "<leader>gS", function() require("neogit").open() end, desc = "neogit: open status buffer" },
+    { "<leader>G", function() require("neogit").open() end, desc = "neogit: open status buffer" },
     {
       "<localleader>gc",
       function() require("neogit").open({ "commit", "-v" }) end,
       desc = "neogit: open commit buffer",
     },
-    { "<localleader>gl", function() require("neogit").popups.pull.create() end, desc = "neogit: open pull popup" },
-    { "<localleader>gp", function() require("neogit").popups.push.create() end, desc = "neogit: open push popup" },
+    { "<localleader>gl", function() require("neogit").popups.pull.create() end, desc = "neogit: pull commit(s)" },
+    { "<localleader>gp", function() require("neogit").popups.push.create() end, desc = "neogit: push commit(s)" },
     {
       "<localleader>gbb",
       function()
@@ -40,6 +41,7 @@ if vim.g.gitter == "neogit" then
 elseif vim.g.gitter == "fugitive" then
   git_keys = {
     { "<leader>gS", "<cmd>Git<cr>", desc = "git: open status buffer" },
+    { "<leader>G", "<cmd>Git<cr>", desc = "git: open status buffer" },
     {
       "<localleader>gc",
       "<cmd>tabn|Git commit<cr>",
@@ -218,7 +220,7 @@ return {
     -- commit = "b89ef391d20f45479e92bd4190e444c9ec9163a3",
     keys = git_keys,
     config = function()
-      neogit().setup({
+      require("neogit").setup({
         disable_signs = false,
         disable_hint = true,
         disable_commit_confirmation = true,
@@ -236,7 +238,7 @@ return {
 
       require("mega.autocmds").augroup("Neogit", {
         pattern = "NeogitPushComplete",
-        callback = neogit().close,
+        callback = require("neogit").close,
       })
     end,
   },

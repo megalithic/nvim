@@ -1,7 +1,85 @@
--- [[ Basic Keymaps ]]
+local U = require("mega.utils")
+
+local M = {}
+
 --  See `:help vim.keymap.set()`
 local map = vim.keymap.set
-local U = require("mega.utils")
+
+-- local nmap, cmap, xmap, imap, vmap, omap, tmap, smap
+-- local nnoremap, cnoremap, xnoremap, inoremap, vnoremap, onoremap, tnoremap, snoremap
+
+--[[
+  ╭────────────────────────────────────────────────────────────────────────────╮
+  │  Str  │  Help page   │  Affected modes                           │  VimL   │
+  │────────────────────────────────────────────────────────────────────────────│
+  │  ''   │  mapmode-nvo │  Normal, Visual, Select, Operator-pending │  :map   │
+  │  'n'  │  mapmode-n   │  Normal                                   │  :nmap  │
+  │  'v'  │  mapmode-v   │  Visual and Select                        │  :vmap  │
+  │  's'  │  mapmode-s   │  Select                                   │  :smap  │
+  │  'x'  │  mapmode-x   │  Visual                                   │  :xmap  │
+  │  'o'  │  mapmode-o   │  Operator-pending                         │  :omap  │
+  │  '!'  │  mapmode-ic  │  Insert and Command-line                  │  :map!  │
+  │  'i'  │  mapmode-i   │  Insert                                   │  :imap  │
+  │  'l'  │  mapmode-l   │  Insert, Command-line, Lang-Arg           │  :lmap  │
+  │  'c'  │  mapmode-c   │  Command-line                             │  :cmap  │
+  │  't'  │  mapmode-t   │  Terminal                                 │  :tmap  │
+  ╰────────────────────────────────────────────────────────────────────────────╯
+  --]]
+
+---create a mapping function factory
+---@param mode string
+---@param o table
+---@return fun(lhs: string, rhs: string|function, opts: table|nil) 'create a mapping'
+local function mapper(mode, o)
+  -- copy the opts table as extends will mutate the opts table passed in otherwise
+  local parent_opts = vim.deepcopy(o)
+  ---Create a mapping
+  ---@param lhs string
+  ---@param rhs string|function
+  ---@param opts table
+  return function(lhs, rhs, opts)
+    -- If the label is all that was passed in, set the opts automagically
+    opts = type(opts) == "string" and { label = opts } or opts and vim.deepcopy(opts) or {}
+
+    -- if not opts.has or client.server_capabilities[opts.has .. "Provider"] then
+    if opts.label or opts.desc then
+      local ok, wk = pcall(require, "which-key")
+      if ok and wk then wk.register({ [lhs] = opts.label or opts.desc }, { mode = mode }) end
+      if opts.label and not opts.desc then opts.desc = opts.label end
+      opts.label = nil
+    end
+
+    if rhs == nil then
+      vim.pprint(mode, lhs, rhs, opts, parent_opts)
+    else
+      map(mode, lhs, rhs, vim.tbl_extend("keep", opts, parent_opts))
+    end
+  end
+end
+
+local map_opts = { remap = true, silent = true }
+local noremap_opts = { remap = false, silent = true }
+
+-- TODO: https://github.com/b0o/nvim-conf/blob/main/lua/user/mappings.lua#L19-L37
+
+for _, mode in ipairs({ "n", "x", "i", "v", "o", "t", "s", "c" }) do
+  -- {
+  -- n = "normal",
+  -- v = "visual",
+  -- s = "select",
+  -- x = "visual & select",
+  -- i = "insert",
+  -- o = "operator",
+  -- t = "terminal",
+  -- c = "command",
+  -- }
+
+  -- recursive global mappings
+  -- mega[mode .. "map"] = mapper(mode, map_opts)
+  _G[mode .. "map"] = mapper(mode, map_opts)
+  -- non-recursive global mappings
+  _G[mode .. "noremap"] = mapper(mode, noremap_opts)
+end
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -11,16 +89,33 @@ local U = require("mega.utils")
 -- or just use <C-\><C-n> to exit terminal mode
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
--- [[ command mode ]] ---------------------
+-- [[ command mode ]] ----------------------------------------------------------
 map("v", "<leader>S", ":!sort<cr>", { desc = "Sort selection" })
 map("n", "<leader>:", ":!", { desc = "Execute last command" })
 map("n", "<leader>;", ":<Up>", { desc = "Go to last command" })
---
--- " Command mode conveniences
--- noremap <leader>: :!
--- noremap <leader>; :<Up>
+-- https://github.com/tpope/vim-rsi/blob/master/plugin/rsi.vim
+-- c-a / c-e everywhere - RSI.vim provides these
+cmap("<C-n>", "<Down>")
+cmap("<C-p>", "<Up>")
+-- <C-A> allows you to insert all matches on the command line e.g. bd *.js <c-a>
+-- will insert all matching files e.g. :bd a.js b.js c.js
+cmap("<c-x><c-a>", "<c-a>")
+cmap("<C-a>", "<Home>")
+cmap("<C-e>", "<End>")
+cmap("<C-b>", "<Left>")
+cmap("<C-d>", "<Del>")
+cmap("<C-k>", [[<C-\>e getcmdpos() == 1 ? '' : getcmdline()[:getcmdpos() - 2]<CR>]])
+-- move cursor one character backwards unless at the end of the command line
+cmap("<C-f>", [[getcmdpos() > strlen(getcmdline())? &cedit: "\<Lt>Right>"]], { expr = true })
+-- see :h cmdline-editing
+cmap("<Esc>b", [[<S-Left>]])
+cmap("<Esc>f", [[<S-Right>]])
 
--- [[ ui/vim behaviours ]] -------------------------------------------------------------------------------------------------------
+-- [[ line movements ]] --------------------------------------------------------
+imap("<C-a>", "<Home>")
+imap("<C-e>", "<End>")
+
+-- [[ ui/vim behaviours ]] -----------------------------------------------------
 map("n", "<esc>", function()
   vim.cmd.doautoall("User EscDeluxeStart")
   U.clear_ui({ deluxe = true })
@@ -52,7 +147,7 @@ map("n", "J", "<nop>")
 
 map("n", "<localleader><localleader>", "<C-^>")
 
--- [[ better movements within a buffer ]] -------------------------------------------------------------------------------------------------------
+-- [[ better movements within a buffer ]] --------------------------------------
 map("n", "H", "^")
 map("n", "L", "$")
 map({ "v", "x" }, "L", "g_")
@@ -71,14 +166,14 @@ map("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 map({ "n", "x", "o" }, "n", "nzz")
 map({ "n", "x", "o" }, "N", "Nzz")
 
--- [[ macros ]] -------------------------------------------------------------------------------------------------------
+-- [[ macros ]] ----------------------------------------------------------------
 -- Map Q to replay q register for macro
 map("n", "q", "<Nop>")
 map("n", "<localleader>q", "q", { desc = "macros: start macro" })
 map("n", "Q", "@qj", { desc = "macros: run `q` macro" })
 map("n", "Q", ":norm @q<CR>", { desc = "macros: run `q` macro (selection)" })
 
--- [[ folds ]] -------------------------------------------------------------------------------------------------------
+-- [[ folds ]] -----------------------------------------------------------------
 map("n", "<leader>z", "za", { desc = "Toggle current fold" })
 map("x", "<leader>z", "zf", { desc = "Create fold from selection" })
 map("n", "zf", function() vim.cmd.normal("zMzv") end, { desc = "Fold all except current" })
@@ -86,13 +181,13 @@ map("n", "zF", function() vim.cmd.normal("zMzvzczo") end, { desc = "Fold all exc
 map("n", "zO", function() vim.cmd.normal("zR") end, { desc = "Open all folds" })
 map("n", "zo", "zO", { desc = "Open all folds descending from current line" })
 
--- [[ plugin management ]] -------------------------------------------------------------------------------------------------------
+-- [[ plugin management ]] -----------------------------------------------------
 map("n", "<leader>ps", "<cmd>Lazy sync<cr>", { desc = "[lazy] sync plugins" })
 
--- [[ opening/closing delimiters/matchup/pairs ]] -------------------------------------------------------------------------------------------------------
+-- [[ opening/closing delimiters/matchup/pairs ]] ------------------------------
 map({ "n", "o", "s", "v", "x" }, "<Tab>", "%", { desc = "jump to opening/closing delimiter", remap = true, silent = false })
 
--- [[ copy/paste/yank/registers ]] -------------------------------------------------------------------------------------------------------
+-- [[ copy/paste/yank/registers ]] ---------------------------------------------
 -- don't yank the currently pasted text // thanks @theprimeagen
 vim.cmd([[xnoremap <expr> p 'pgv"' . v:register . 'y']])
 -- xnoremap("p", "\"_dP", "paste with saved register contents")
@@ -164,7 +259,7 @@ map("x", "<leader>h", "\"hy:%s/<C-r>h/<C-r>h/gc<left><left><left>", {
                  (breaks on multiple lines & special chars)]],
 })
 
--- [[ spelling ]] -------------------------------------------------------------------------------------------------------
+-- [[ spelling ]] --------------------------------------------------------------
 -- map("n", "<leader>s", "z=e") -- Correct current word
 map("n", "<localleader>sj", "]s", { desc = "[spell] Move to next misspelling" })
 map("n", "<localleader>sk", "[s", { desc = "[spell] Move to previous misspelling" })
@@ -182,14 +277,14 @@ end, { desc = "[spell] Add word under cursor to dictionary" })
 
 map("n", "<localleader>si", function() vim.cmd.normal("ysiw`") end, { desc = "[spell] Ignore spelling of word under cursor" })
 
--- [[ selections ]] -------------------------------------------------------------------------------------------------------
+-- [[ selections ]] ------------------------------------------------------------
 map("n", "gv", "`[v`]", { desc = "reselect pasted content" })
 map("n", "<leader>V", "V`]", { desc = "reselect pasted content" })
 map("n", "gp", "`[v`]", { desc = "reselect pasted content" })
 map("n", "gV", "ggVG", { desc = "select whole buffer" })
 map("n", "<leader>v", "ggVG", { desc = "select whole buffer" })
 
--- [[ line editing ]] ----------------------------------------------------------------------------------------------------
+-- [[ line editing ]] ----------------------------------------------------------
 -- TLDR: Conditionally modify character at end of line
 -- Description:
 -- This function takes a delimiter character and:
@@ -222,3 +317,5 @@ end
 
 map("n", "<localleader>,", modify_line_end_delimiter(","), { desc = "add comma `,` to end of current line" })
 map("n", "<localleader>;", modify_line_end_delimiter(";"), { desc = "add semicolon `;` to end of current line" })
+
+return M

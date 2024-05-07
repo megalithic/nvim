@@ -2,7 +2,10 @@
 -- https://github.com/jfpedroza/neotest-elixir
 -- https://github.com/jfpedroza/neotest-elixir/pull/23
 
+local SETTINGS = require("mega.settings")
+local icons = SETTINGS.icons
 local keys = {}
+local fmt = string.format
 if vim.g.tester == "neotest" then
   keys = {
     {
@@ -153,8 +156,6 @@ return {
     },
     keys = keys,
     config = function()
-      local SETTINGS = require("mega.settings")
-      local icons = SETTINGS.icons
       local neotest = require("neotest")
       local nt_ns = vim.api.nvim_create_namespace("neotest")
       vim.diagnostic.config({
@@ -193,7 +194,7 @@ return {
           enabled = false,
           open = function() vim.cmd("Trouble quickfix") end,
         },
-        floating = { border = mega.current_border() },
+        floating = { border = SETTINGS.current_border },
         icons = {
           expanded = "",
           child_prefix = "",
@@ -202,11 +203,11 @@ return {
           non_collapsible = "",
           collapsed = "",
 
-          passed = mega.icons.test.passed,
-          running = mega.icons.test.running,
-          skipped = mega.icons.test.skipped,
-          failed = mega.icons.test.failed,
-          unknown = mega.icons.test.unknown,
+          passed = icons.test.passed,
+          running = icons.test.running,
+          skipped = icons.test.skipped,
+          failed = icons.test.failed,
+          unknown = icons.test.unknown,
           running_animated = vim.tbl_map(function(s) return s .. " " end, { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }),
           -- running_animated = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
           -- running_animated = vim.tbl_map(

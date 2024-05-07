@@ -4,10 +4,12 @@ local function should_disable(lang, bufnr)
   local size = vim.fn.getfsize(vim.api.nvim_buf_get_name(bufnr or 0))
   -- size will be -2 if it doesn't fit into a number
   if size > disable_max_size or size == -2 then return true end
+
   if vim.tbl_contains({ "ruby" }, lang) then return true end
 
   return false
 end
+
 return {
   {
     "nvim-treesitter/nvim-treesitter",
@@ -100,14 +102,25 @@ return {
       },
 
       endwise = { enable = true },
-      matchup = { enable = true, include_match_words = true, disable = should_disable, disable_virtual_text = false },
+      matchup = {
+        enable = true,
+        include_match_words = true,
+        disable = function(lang, bufnr)
+          if vim.tbl_contains({ "ruby", "typescriptreact", "javascriptreact", "typescript", "javascript" }, lang) then -- or lang == "python" then
+            return true
+          else
+            return should_disable(lang, bufnr)
+          end
+        end,
+        disable_virtual_text = false,
+      },
       incremental_selection = {
         enable = true,
         keymaps = {
           -- init_selection = ":lua require'wildfire'.init_selection()<CR>:lua require('flash').treesitter()<CR>",
           --
           -- @see: flash.nvim
-          -- init_selection = "vv",
+          init_selection = "vv",
           node_incremental = "v",
           node_decremental = "V",
           scope_incremental = "v", -- increment to the upper scope (as defined in locals.scm)
@@ -213,9 +226,42 @@ return {
   { "RRethy/nvim-treesitter-endwise", dependencies = { "nvim-treesitter/nvim-treesitter" } },
   { "megalithic/nvim-ts-autotag", dependencies = { "nvim-treesitter/nvim-treesitter" } },
   {
+    "nvim-treesitter/nvim-treesitter-context",
+    config = function()
+      require("treesitter-context").setup({
+        enable = true,
+        max_lines = 1,
+        trim_scope = "outer",
+        patterns = { -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
+          -- For all filetypes
+          -- Note that setting an entry here replaces all other patterns for this entry.
+          -- By setting the 'default' entry below, you can control which nodes you want to
+          -- appear in the context window.
+          default = {
+            "class",
+            "function",
+            "method",
+            "for", -- These won't appear in the context
+            "while",
+            "if",
+            "switch",
+            "case",
+            "element",
+            "call",
+          },
+        },
+        exact_patterns = {},
+
+        zindex = 20, -- The Z-index of the context window
+        mode = "cursor", -- Line used to calculate context. Choices: 'cursor', 'topline'
+        separator = nil, -- Separator between context and content. Should be a single character string, like '-'.
+      })
+    end,
+  },
+  {
     "andymass/vim-matchup",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
-    cond = true,
+    cond = false,
     lazy = false,
     config = function()
       vim.g.matchup_matchparen_nomode = "i"
@@ -241,10 +287,8 @@ return {
   { "yorickpeterse/nvim-tree-pairs", dependencies = { "nvim-treesitter/nvim-treesitter" }, opts = {} },
   {
     "HiPhish/rainbow-delimiters.nvim",
-    -- FIXME: MIGHT be causing segfaults
-    cond = true,
     dependencies = { "nvim-treesitter/nvim-treesitter" },
-    event = "VimEnter",
+    lazy = false,
     config = function()
       local rainbow = require("rainbow-delimiters")
       vim.g.rainbow_delimiters = {

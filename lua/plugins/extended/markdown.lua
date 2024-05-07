@@ -12,11 +12,28 @@ return {
   --   ft = { "markdown", "text", "gitcommit" },
   --   cmd = { "InsertNewBullet" },
   -- },
+  -- {
+  --   "iamcco/markdown-preview.nvim",
+  --   cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+  --   ft = { "markdown" },
+  --   build = function() vim.fn["mkdp#util#install"]() end,
+  -- },
+  {
+    "toppair/peek.nvim",
+    event = { "VeryLazy" },
+    build = "deno task --quiet build:fast",
+    config = function()
+      require("peek").setup()
+      vim.api.nvim_create_user_command("PeekOpen", require("peek").open, {})
+      vim.api.nvim_create_user_command("PeekClose", require("peek").close, {})
+    end,
+  },
   {
     "gaoDean/autolist.nvim",
     event = {
       "BufRead **.md,**.neorg,**.org",
       "BufNewFile **.md,**.neorg,**.org",
+      "FileType gitcommit,NeogitCommitMessage,.git/COMMIT_EDITMSG",
     },
     -- enabled = false,
     version = "2.3.0",
@@ -37,6 +54,7 @@ return {
     event = {
       "BufRead **.md,**.yaml,**.neorg,**.org",
       "BufNewFile **.md,**.yaml,**.neorg,**.org",
+      -- "FileType gitcommit,NeogitCommitMessage,.git/COMMIT_EDITMSG",
     },
     dependencies = "nvim-treesitter",
     config = function()

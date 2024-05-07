@@ -89,13 +89,14 @@ local M = {
     "folds",
     "env",
   },
-  -- REF: elixir LSPs: elixir-tools(tools-elixirls, tools-nextls, credo), elixirls, nextls, lexical
-  enabled_elixir_ls = { "", "", "elixirls", "nextls", "lexical" },
   disabled_lsp_formatters = { "tailwindcss", "html", "tsserver", "ls_emmet", "zk", "sumneko_lua" },
+  -- REF: elixir LSPs: elixir-tools(tools-elixirls, tools-nextls, credo), elixirls, nextls, lexical
+  enabled_elixir_ls = { "", "", "elixirls", "", "lexical" },
   formatter_exclusions = { "tools-elixirls", "tools-nextls", "", "nextls", "lexical" },
-  diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "", "tsserver" },
-  max_diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "lexical" },
-  completion_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "", "" },
+  diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "", "nextls", "lexical", "tsserver" },
+  definition_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "" },
+  max_diagnostic_exclusions = { "tools-elixirls", "tools-nextls", "", "nextls", "lexical" },
+  completion_exclusions = { "tools-elixirls", "tools-nextls", "elixirls", "nextls", "" },
   disable_autolint = false,
   disable_autoformat = false,
   markdown_fenced_languages = {
@@ -430,6 +431,16 @@ M.apply = function()
         precedes = "‹", -- alts: … «
         trail = "·", -- alts: • BULLET (U+2022, UTF-8: E2 80 A2)
       },
+      formatoptions = vim.opt.formatoptions
+        - "a" -- Auto formatting is BAD.
+        - "t" -- Don't auto format my code. I got linters for that.
+        + "c" -- In general, I like it when comments respect textwidth
+        + "q" -- Allow formatting comments w/ gq
+        - "o" -- O and o, don't continue comments
+        + "r" -- But do continue when pressing enter.
+        + "n" -- Indent past the formatlistpat, not underneath it.
+        + "j" -- Auto-remove comments if possible.
+        - "2", -- I'm not in gradeschool anymore
 
       fillchars = {
         horiz = "━",
@@ -530,6 +541,11 @@ M.apply = function()
     },
     -- ['.*tmux.*conf$'] = 'tmux',
   })
+  function vim.pprint(...)
+    local s, args = pcall(vim.deepcopy, { ... })
+    if not s then args = { ... } end
+    vim.schedule_wrap(vim.notify)(vim.inspect(#args > 1 and args or unpack(args)))
+  end
 
   function vim.pprint(...)
     local s, args = pcall(vim.deepcopy, { ... })

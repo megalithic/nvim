@@ -52,9 +52,7 @@ M.list = {
     },
   },
   elixirls = function()
-    -- if not mega.lsp.is_enabled_elixir_ls 'elixirls' then
-    --   return nil
-    -- end
+    if not U.lsp.is_enabled_elixir_ls("elixirls") then return nil end
 
     return {
       cmd = { fmt("%s/lsp/elixir-ls/%s", vim.env.XDG_DATA_HOME, "language_server.sh") },
@@ -198,9 +196,7 @@ M.list = {
   -- Umbrella app support:
   -- https://github.com/scottming/nvim/commit/ab15453bf172f1a253ce51cfb1ad24759b28fb19#diff-f3b6945dc71f9ffc53624b2053a25eee19634fccc7d0a59ef190e1d87114bb9aR10-R22
   lexical = function()
-    -- if not mega.lsp.is_enabled_elixir_ls 'lexical' then
-    --   return nil
-    -- end
+    if not U.lsp.is_enabled_elixir_ls("lexical") then return nil end
 
     return {
       cmd = { vim.env.XDG_DATA_HOME .. "/lsp/lexical/_build/dev/package/lexical/bin/start_lexical.sh" },
@@ -604,9 +600,7 @@ M.list = {
 M.unofficial = {
   lexical = function(server_name)
     server_name = server_name or "lexical"
-    -- if not mega.lsp.is_enabled_elixir_ls 'lexical' then
-    --   return
-    -- end
+    if not U.lsp.is_enabled_elixir_ls("lexical") then return nil end
     local configs = require("lspconfig.configs")
 
     if not configs["server_name"] then

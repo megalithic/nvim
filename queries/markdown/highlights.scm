@@ -105,9 +105,9 @@
                       (#set! conceal "▐"))
 
 ; Ease fenced code block conceals a bit
-((fenced_code_block_delimiter) @punctuation.tilda (#set! conceal "~"))
-((fenced_code_block_delimiter) @punctuation.delimiter (#set! conceal "~"))
-((fenced_code_block_delimiter) @conceal (#set! conceal "~"))
+((fenced_code_block_delimiter) @punctuation.tilda (#set! conceal ""))
+((fenced_code_block_delimiter) @punctuation.delimiter (#set! conceal ""))
+((fenced_code_block_delimiter) @conceal (#set! conceal ""))
 
 ; Awesome fenced code block language conceals using Nerd icons
 ; This solution is a bit hacky to allow the Nerd icon to expand to full width

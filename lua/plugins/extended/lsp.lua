@@ -137,15 +137,29 @@ return {
           diagnostic_handler(err, result, ctx, config)
         end
 
-        -- if action opens up qf list, open the first item and close the list
-        local function choose_list_first(options)
-          -- if num_files > 1 then
-          --   U.qf_populate(entries, { title = "Definitions" })
-          --   vim.cmd("Trouble qflist open")
-          -- end
+        local definition_handler = vim.lsp.handlers["textDocument/definition"]
+        vim.lsp.handlers["textDocument/definition"] = function(err, result, ctx, config)
+          local client_name = vim.lsp.get_client_by_id(ctx.client_id).name
+          print(client_name)
+          -- disables diagnostic reporting for specific clients
+          if vim.tbl_contains(SETTINGS.definition_exclusions, client_name) then
+            print("returning for " .. client_name)
+            return
+          end
 
-          vim.fn.setqflist({}, " ", options)
-          vim.cmd.cfirst()
+          definition_handler(err, result, ctx, config)
+        end
+
+        -- if action opens up qf list, open the first item and close the list
+        local function choose_list_first(items)
+          print(#items)
+          if #items > 1 then
+            U.qf_populate(items, { title = "Definitions" })
+            vim.cmd("Trouble qflist open")
+          end
+
+          -- vim.fn.setqflist({}, "r", items)
+          -- vim.cmd.cfirst()
         end
         local map = function(keys, func, desc) vim.keymap.set("n", keys, func, { buffer = bufnr, desc = "LSP: " .. desc }) end
         local icons = require("mega.settings").icons
@@ -164,6 +178,7 @@ return {
 
         map("gd", require("telescope.builtin").lsp_definitions, "[g]oto [d]efinition")
         -- map("gd", function() vim.lsp.buf.definition({ on_list = choose_list_first }) end, "[g]oto [d]efinition")
+        -- map("gd", function() vim.cmd("Trouble lsp_definitions toggle focus=true") end, "[g]oto [d]efinition (trouble)")
         map("gD", function()
           vim.cmd.vsplit()
           vim.lsp.buf.definition()

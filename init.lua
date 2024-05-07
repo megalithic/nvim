@@ -1,7 +1,3 @@
--- NOTE: fix for initial flash of black
--- REF: follow along here: https://github.com/neovim/neovim/pull/26381
--- vim.o.termguicolors = false
-
 if vim.loader then vim.loader.enable() end
 vim.env.DYLD_LIBRARY_PATH = "$BREW_PREFIX/lib/"
 
@@ -11,6 +7,8 @@ _G.mega = {
   ui = {},
   lsp = {},
   req = require("mega.req"),
+  term = nil,
+  notify = vim.notify,
 }
 
 vim.g.mapleader = ","

@@ -12,16 +12,18 @@ local M = {
   lsp = {},
 }
 
-function M.lsp.is_enabled_elixir_ls(ls, enabled_clients)
+function M.lsp.is_enabled_elixir_ls(client, enabled_clients)
+  local client_name = type(client) == "table" and client.name or client
   enabled_clients = enabled_clients or SETTINGS.enabled_elixir_ls
 
-  return vim.tbl_contains(enabled_clients, ls)
+  return vim.tbl_contains(enabled_clients, client_name)
 end
 
 function M.lsp.formatting_filter(client, exclusions)
+  local client_name = type(client) == "table" and client.name or client
   exclusions = exclusions or SETTINGS.formatter_exclusions
 
-  return not vim.tbl_contains(exclusions, client.name)
+  return not vim.tbl_contains(exclusions, client_name)
 end
 
 --- Call the given function and use `vim.notify` to notify of any errors
